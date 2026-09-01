@@ -1,0 +1,147 @@
+{
+  "generic_aliases": [
+    {
+      "key": "browser",
+      "triggers": [
+        "查詢工具",
+        "搜尋工具",
+        "搜索工具",
+        "瀏覽器",
+        "上網",
+        "查資料",
+        "查詢",
+        "搜尋",
+        "搜索"
+      ],
+      "candidates": [
+        "Google Chrome",
+        "Chrome",
+        "Microsoft Edge",
+        "Edge",
+        "Firefox",
+        "Brave",
+        "Opera"
+      ],
+      "reason": "使用者需要查詢或上網工具"
+    },
+    {
+      "key": "document",
+      "triggers": [
+        "做報告",
+        "寫報告",
+        "文件",
+        "文書",
+        "打字工具"
+      ],
+      "candidates": [
+        "Microsoft Word",
+        "Word",
+        "LibreOffice Writer",
+        "WPS Writer"
+      ],
+      "reason": "使用者需要文書工具"
+    },
+    {
+      "key": "chat",
+      "triggers": [
+        "聊天工具",
+        "語音聊天",
+        "聊天",
+        "社群"
+      ],
+      "candidates": [
+        "Discord",
+        "LINE",
+        "Telegram",
+        "Microsoft Teams"
+      ],
+      "reason": "使用者需要聊天工具"
+    },
+    {
+      "key": "video",
+      "triggers": [
+        "看影片",
+        "播放影片",
+        "影片播放器",
+        "播放器"
+      ],
+      "candidates": [
+        "VLC media player",
+        "VLC",
+        "PotPlayer",
+        "Movies & TV"
+      ],
+      "reason": "使用者需要影片播放工具"
+    }
+  ],
+  "app_aliases": {
+    "chrome": [
+      "Google Chrome",
+      "Chrome"
+    ],
+    "google chrome": [
+      "Google Chrome",
+      "Chrome"
+    ],
+    "edge": [
+      "Microsoft Edge",
+      "Edge"
+    ],
+    "microsoft edge": [
+      "Microsoft Edge",
+      "Edge"
+    ],
+    "firefox": [
+      "Firefox"
+    ],
+    "brave": [
+      "Brave"
+    ],
+    "opera": [
+      "Opera"
+    ],
+    "discord": [
+      "Discord"
+    ],
+    "dc": [
+      "Discord"
+    ],
+    "word": [
+      "Microsoft Word",
+      "Word"
+    ],
+    "excel": [
+      "Microsoft Excel",
+      "Excel"
+    ],
+    "vlc": [
+      "VLC media player",
+      "VLC"
+    ],
+    "cmd": [
+      "Command Prompt",
+      "命令提示字元",
+      "Windows Terminal",
+      "終端機"
+    ],
+    "command prompt": [
+      "Command Prompt",
+      "命令提示字元"
+    ],
+    "命令提示字元": [
+      "命令提示字元",
+      "Command Prompt"
+    ],
+    "命令列": [
+      "Command Prompt",
+      "命令提示字元",
+      "Windows Terminal",
+      "終端機"
+    ],
+    "終端機": [
+      "終端機",
+      "Windows Terminal",
+      "Command Prompt"
+    ]
+  }
+}

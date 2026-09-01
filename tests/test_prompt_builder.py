@@ -1,0 +1,68 @@
+import unittest
+
+from ai.prompt_builder import build_system_prompt
+
+
+class PromptBuilderTests(unittest.TestCase):
+    def test_build_system_prompt_does_not_add_reply_length_instruction(self):
+        prompt = build_system_prompt(
+            {"system_prompt": "你是 Nova。"},
+            max_chars=120,
+        )
+
+        self.assertIn("你是 Nova。", prompt)
+        self.assertNotIn("回答長度規則", prompt)
+        self.assertNotIn("請將每次回答控制", prompt)
+
+    def test_build_system_prompt_adds_one_complete_personality_prompt(self):
+        prompt = build_system_prompt(
+            {
+                "system_prompt": "你是 Nova。",
+                "selected_personality": "catgirl_companion",
+            },
+            max_chars=80,
+        )
+
+        self.assertIn("完整人格設定：", prompt)
+        self.assertIn("你是 Nova，一位女生貓娘桌寵", prompt)
+        self.assertNotIn("簡潔直答型", prompt)
+
+    def test_build_system_prompt_uses_custom_personality_as_exclusive_profile(self):
+        prompt = build_system_prompt(
+            {
+                "system_prompt": "你是 Nova。",
+                "selected_personality": "custom",
+                "custom_personality": "使用繁體中文，稱呼使用者為球球。",
+            },
+            max_chars=80,
+        )
+
+        self.assertIn("使用繁體中文，稱呼使用者為球球。", prompt)
+
+    def test_build_system_prompt_ignores_custom_personality_when_not_selected(self):
+        prompt = build_system_prompt(
+            {
+                "system_prompt": "你是 Nova。",
+                "selected_personality": "warm_companion",
+                "custom_personality": "不要加入這段。",
+            },
+            max_chars=80,
+        )
+
+        self.assertNotIn("不要加入這段。", prompt)
+
+    def test_build_system_prompt_migrates_legacy_multi_select_to_first_profile(self):
+        prompt = build_system_prompt(
+            {
+                "system_prompt": "你是 Nova。",
+                "personality_options": ["concise", "cute"],
+            },
+            max_chars=80,
+        )
+
+        self.assertIn("簡潔直答型", prompt)
+        self.assertNotIn("可愛陪伴型", prompt)
+
+
+if __name__ == "__main__":
+    unittest.main()

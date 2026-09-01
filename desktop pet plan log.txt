@@ -1,0 +1,525 @@
+==========================================================
+Nova Desktop Assistant
+Project Plan
+Version : 0.1
+Language : Python
+GUI : PySide6
+Platform : Windows
+==========================================================
+
+==============================
+一、專案目標
+==============================
+
+Nova 是一個 Windows 桌面 AI 助手。
+
+並非以「桌寵遊戲」為目標，而是以「可長期維護、可持續擴充」的桌面助手平台為目標。
+
+第一版功能保持簡潔，但整體架構需預留未來功能擴充能力。
+
+設計原則：
+
+- Modular（模組化）
+- Low Coupling（低耦合）
+- High Cohesion（高內聚）
+- Config Driven（設定檔驅動）
+- Easy Maintenance（易於維護）
+- Plugin Ready（預留插件能力）
+
+
+==============================
+二、第一版功能
+==============================
+
+【桌寵】
+
+✓ 透明背景
+✓ 永遠置頂
+✓ 可拖曳
+✓ 點擊判定僅角色本體（透明區域可點穿）
+✓ PNG 素材
+✓ 500x500
+✓ 眨眼動畫（三張圖循環）
+
+【聊天】
+
+✓ AI 對話
+✓ 漂浮聊天泡泡
+✓ OpenAI Compatible API
+
+【AI】
+
+✓ Prompt System
+✓ Conversation History
+✓ JSON Memory
+✓ OpenAI Compatible Endpoint
+
+【設定】
+
+✓ config.ini
+✓ api.ini
+✓ prompt.json
+✓ history.json
+✓ memory.json
+✓ .env（可存 API Key）
+
+==============================
+三、目前不實作（僅預留）
+==============================
+
+Voice
+TTS
+Speech Recognition
+Plugin
+RAG
+Knowledge Base
+Weather
+Calendar
+Reminder
+OBS
+Discord
+Spotify
+Function Calling
+MCP
+Live2D
+多角色
+動畫系統擴充
+
+
+==============================
+四、建議資料夾結構
+==============================
+
+Nova/
+
+│
+├── main.py
+│
+├── core/
+│   ├── application.py
+│   ├── event_bus.py
+│   ├── window_manager.py
+│   └── startup.py
+│
+├── ui/
+│   ├── desktop_pet.py
+│   ├── bubble.py
+│   ├── settings_window.py
+│   └── widgets.py
+│
+├── ai/
+│   ├── provider.py
+│   ├── client.py
+│   ├── memory.py
+│   ├── history.py
+│   └── prompt_loader.py
+│
+├── animation/
+│   ├── animator.py
+│   └── blink.py
+│
+├── config/
+│   ├── config_manager.py
+│   ├── config.ini
+│   ├── api.ini
+│   ├── prompt.json
+│   ├── history.json
+│   └── memory.json
+│
+├── assets/
+│   ├── images/
+│   ├── icons/
+│   └── animations/
+│
+├── utils/
+│   ├── logger.py
+│   ├── helper.py
+│   └── file_utils.py
+│
+├── plugins/
+│
+└── logs/
+
+
+==============================
+五、模組職責
+==============================
+
+Core
+
+負責：
+
+程式生命週期
+事件管理
+視窗管理
+模組初始化
+
+不得直接依賴 AI。
+
+------------------------------
+
+Desktop Pet
+
+負責：
+
+角色顯示
+
+拖曳
+
+滑鼠事件
+
+動畫播放
+
+不得處理 AI。
+
+------------------------------
+
+Bubble
+
+負責：
+
+聊天泡泡
+
+訊息顯示
+
+Loading
+
+Thinking
+
+Error
+
+不得直接請求 AI。
+
+------------------------------
+
+AI Module
+
+負責：
+
+HTTP Request
+
+Prompt
+
+Memory
+
+History
+
+JSON
+
+不得依賴 UI。
+
+------------------------------
+
+Config
+
+負責：
+
+讀寫 ini
+
+讀寫 json
+
+環境變數
+
+提供統一介面。
+
+==============================
+六、AI 架構
+==============================
+
+DesktopPet
+
+↓
+
+Bubble
+
+↓
+
+AI Controller
+
+↓
+
+Provider
+
+↓
+
+HTTP Client
+
+↓
+
+OpenAI Compatible API
+
+所有 AI 呼叫皆經由 Provider。
+
+不得直接於 UI 發送 Request。
+
+==============================
+七、Prompt 系統
+==============================
+
+prompt.json
+
+包含：
+
+角色名稱
+
+System Prompt
+
+人格設定
+
+限制
+
+回覆風格
+
+語氣
+
+不得寫死於程式。
+
+==============================
+八、Memory
+==============================
+
+memory.json
+
+保存：
+
+使用者資訊
+
+AI 長期記憶
+
+可限制最大容量。
+
+==============================
+九、History
+==============================
+
+history.json
+
+保存聊天紀錄。
+
+config.ini 可設定：
+
+最大保存筆數
+
+超出後自動移除舊資料。
+
+==============================
+十、API
+==============================
+
+api.ini
+
+包含：
+
+Base URL
+
+Model
+
+Timeout
+
+Temperature
+
+Max Tokens
+
+API Key
+
+API Key 可改由 .env 載入。
+
+==============================
+十一、事件(Event Bus)
+==============================
+
+所有模組透過 Event Bus 通訊。
+
+例如：
+
+Pet Click
+
+Bubble Open
+
+Message Send
+
+Message Receive
+
+Animation Start
+
+Animation End
+
+API Error
+
+避免模組直接互相呼叫。
+
+==============================
+十二、動畫
+==============================
+
+第一版：
+
+Idle
+
+Blink
+
+Animator 必須保留擴充能力。
+
+未來可增加：
+
+Walk
+
+Jump
+
+Sleep
+
+Happy
+
+Sad
+
+Angry
+
+==============================
+十三、聊天泡泡
+==============================
+
+點擊 Nova
+
+↓
+
+Bubble 出現
+
+↓
+
+輸入文字
+
+↓
+
+AI 回覆
+
+↓
+
+Bubble 顯示內容
+
+介面保持簡潔。
+
+==============================
+十四、Logger
+==============================
+
+所有 Exception
+
+所有 API Error
+
+全部寫入 logs/
+
+方便除錯。
+
+==============================
+十五、未來 Plugin 架構
+==============================
+
+plugins/
+
+每個 Plugin
+
+皆可：
+
+初始化
+
+註冊事件
+
+讀取設定
+
+解除載入
+
+Core 不依賴 Plugin。
+
+==============================
+十六、Coding Style
+==============================
+
+PEP8
+
+Type Hint
+
+Docstring
+
+Class 單一職責
+
+Function 不宜過長
+
+避免 Global Variable
+
+避免 Circular Import
+
+所有 Magic Number 使用常數
+
+==============================
+十七、開發順序
+==============================
+
+Phase 1
+
+✓ 建立專案
+✓ 主視窗
+✓ PNG
+✓ 透明
+✓ TopMost
+✓ 拖曳
+✓ 點穿
+✓ Blink
+
+--------------------------
+
+Phase 2
+
+✓ Bubble
+✓ Event Bus
+✓ Logger
+
+--------------------------
+
+Phase 3
+
+✓ Config
+✓ Prompt
+✓ History
+✓ Memory
+
+--------------------------
+
+Phase 4
+
+✓ OpenAI Compatible API
+✓ Provider
+✓ JSON Prompt
+
+--------------------------
+
+Phase 5
+
+✓ 打包 exe
+✓ 錯誤修正
+✓ 效能優化
+
+==============================
+十八、設計原則
+==============================
+
+任何模組皆可獨立移除。
+
+例如：
+
+移除 AI
+
+桌寵仍正常。
+
+移除 Bubble
+
+桌寵仍正常。
+
+移除 Plugin
+
+主程式仍正常。
+
+所有未來功能皆應以新增模組方式完成，而非修改 Core。
+
+==========================================================
+END
+==========================================================

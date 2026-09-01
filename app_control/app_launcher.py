@@ -1,0 +1,47 @@
+import os
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Callable, Optional
+
+from app_control.app_index import AppIndex
+
+
+@dataclass(frozen=True)
+class AppLaunchResult:
+    success: bool
+    app_name: str
+    path: str = ""
+    error: str = ""
+
+
+class AppLauncher:
+    def __init__(self, app_index: AppIndex, opener: Optional[Callable[[str], None]] = None):
+        self.app_index = app_index
+        self.opener = opener or self._default_opener
+
+    def open_app(self, app_name: str) -> AppLaunchResult:
+        app = self.app_index.find_by_name(app_name)
+        if not app:
+            return AppLaunchResult(success=False, app_name=app_name, error="app_not_found")
+
+        if not _is_shell_apps_folder_target(app.path) and not Path(app.path).exists():
+            return AppLaunchResult(
+                success=False,
+                app_name=app.name,
+                path=app.path,
+                error="shortcut_not_found",
+            )
+
+        self.opener(app.path)
+        return AppLaunchResult(success=True, app_name=app.name, path=app.path)
+
+    @staticmethod
+    def _default_opener(path: str) -> None:
+        startfile = getattr(os, "startfile", None)
+        if not startfile:
+            raise RuntimeError("os.startfile is only available on Windows")
+        startfile(path)
+
+
+def _is_shell_apps_folder_target(path: str) -> bool:
+    return path.casefold().startswith("shell:appsfolder\\")
