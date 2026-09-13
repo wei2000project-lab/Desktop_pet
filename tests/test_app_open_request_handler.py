@@ -1,4 +1,5 @@
 import unittest
+from datetime import datetime, timedelta
 
 from app_control.app_launcher import AppLaunchResult
 from app_control.app_open_request_handler import AppOpenRequestHandler
@@ -114,6 +115,43 @@ class AppOpenRequestHandlerTests(unittest.TestCase):
         self.assertEqual(bus.published[0][0], "ai_message_chunk")
         self.assertIn("已開啟 Google Chrome", bus.published[0][1][0])
 
+    def test_cancelled_windows_launch_finishes_the_chat_turn(self):
+        bus = FakeEventBus()
+        service = FakeService(
+            AppSelection(action="open_app", app_name="Roblox", confidence=0.95, reason="遊戲"),
+            launch_result=AppLaunchResult(
+                success=False,
+                app_name="Roblox",
+                path="Roblox.lnk",
+                error="launch_cancelled",
+            ),
+        )
+        AppOpenRequestHandler(bus=bus, service=service, selector=FakeSelector(None), run_in_background=False)
+
+        bus.subscriptions["app_open_confirmed"]("Roblox")
+
+        self.assertIn(("ai_message_chunk", ("已取消開啟 Roblox。",), {}), bus.published)
+        self.assertIn(("ai_message_finished", ("",), {}), bus.published)
+        self.assertNotIn("ai_message_error", [event[0] for event in bus.published])
+
+    def test_unexpected_launch_error_resets_the_chat_with_an_error(self):
+        bus = FakeEventBus()
+        service = FakeService(
+            AppSelection(action="open_app", app_name="Roblox", confidence=0.95, reason="遊戲")
+        )
+
+        def raise_launch_error(app_name):
+            raise RuntimeError("boom")
+
+        service.open_app_by_name = raise_launch_error
+        AppOpenRequestHandler(bus=bus, service=service, selector=FakeSelector(None), run_in_background=False)
+
+        bus.subscriptions["app_open_confirmed"]("Roblox")
+
+        error_events = [event for event in bus.published if event[0] == "ai_message_error"]
+        self.assertEqual(len(error_events), 1)
+        self.assertIn("無法開啟 Roblox", error_events[0][1][0])
+
     def test_can_open_without_confirmation_when_disabled(self):
         bus = FakeEventBus()
         service = FakeService(
@@ -165,6 +203,12 @@ class AppOpenRequestHandlerTests(unittest.TestCase):
             AppSelection(action="open_app", app_name="Google Chrome", confidence=0.95, reason="上網")
         )
         scheduler = FakeScheduler()
+        requested_at = datetime(2026, 9, 13, 10, 0, 0)
+        now_values = [requested_at, requested_at + timedelta(milliseconds=100)]
+
+        def fake_now():
+            return now_values.pop(0)
+
         AppOpenRequestHandler(
             bus=bus,
             service=service,
@@ -172,6 +216,7 @@ class AppOpenRequestHandlerTests(unittest.TestCase):
             confirm_before_open=True,
             run_in_background=False,
             scheduler=scheduler,
+            now_fn=fake_now,
         )
 
         bus.subscriptions["app_open_requested"]("幫我在5分鐘後開啟 Chrome")
@@ -186,6 +231,51 @@ class AppOpenRequestHandlerTests(unittest.TestCase):
         self.assertEqual(service.opened_app_name, "Google Chrome")
         event_names = [event[0] for event in bus.published]
         self.assertNotIn("app_open_confirmation_requested", event_names)
+
+    def test_scheduled_open_uses_system_notification_without_finishing_active_ai_turn(self):
+        bus = FakeEventBus()
+        service = FakeService(
+            AppSelection(action="open_app", app_name="Google Chrome", confidence=0.95, reason="上網")
+        )
+        handler = AppOpenRequestHandler(
+            bus=bus,
+            service=service,
+            selector=FakeSelector(None),
+            run_in_background=False,
+        )
+
+        handler._open_scheduled_app("Google Chrome")
+
+        self.assertEqual(
+            bus.published,
+            [("chat_system_notification", ("排程時間到，已開啟 Google Chrome。", False), {})],
+        )
+        self.assertNotIn("ai_message_finished", [event[0] for event in bus.published])
+
+    def test_scheduled_launch_failure_uses_error_notification(self):
+        bus = FakeEventBus()
+        service = FakeService(
+            AppSelection(action="open_app", app_name="Roblox", confidence=0.95, reason="遊戲"),
+            launch_result=AppLaunchResult(
+                success=False,
+                app_name="Roblox",
+                path="Roblox.lnk",
+                error="launch_failed",
+            ),
+        )
+        handler = AppOpenRequestHandler(
+            bus=bus,
+            service=service,
+            selector=FakeSelector(None),
+            run_in_background=False,
+        )
+
+        handler._open_scheduled_app("Roblox")
+
+        self.assertEqual(bus.published[0][0], "chat_system_notification")
+        self.assertIn("無法開啟 Roblox", bus.published[0][1][0])
+        self.assertTrue(bus.published[0][1][1])
+        self.assertNotIn("ai_message_error", [event[0] for event in bus.published])
 
     def test_confirmed_scheduled_open_does_not_schedule_when_target_time_already_passed(self):
         bus = FakeEventBus()

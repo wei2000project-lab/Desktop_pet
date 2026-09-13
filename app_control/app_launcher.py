@@ -12,6 +12,7 @@ class AppLaunchResult:
     app_name: str
     path: str = ""
     error: str = ""
+    detail: str = ""
 
 
 class AppLauncher:
@@ -32,7 +33,25 @@ class AppLauncher:
                 error="shortcut_not_found",
             )
 
-        self.opener(app.path)
+        try:
+            self.opener(app.path)
+        except OSError as exc:
+            error = "launch_cancelled" if getattr(exc, "winerror", None) == 1223 else "launch_failed"
+            return AppLaunchResult(
+                success=False,
+                app_name=app.name,
+                path=app.path,
+                error=error,
+                detail=str(exc),
+            )
+        except Exception as exc:
+            return AppLaunchResult(
+                success=False,
+                app_name=app.name,
+                path=app.path,
+                error="launch_failed",
+                detail=str(exc),
+            )
         return AppLaunchResult(success=True, app_name=app.name, path=app.path)
 
     @staticmethod

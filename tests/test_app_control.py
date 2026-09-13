@@ -68,6 +68,7 @@ class AppControlTests(unittest.TestCase):
                         "DisplayIcon": str(registry_app),
                     }
                 ],
+                start_app_records=[],
             )
 
         self.assertEqual([app.name for app in apps], ["Chrome", "Registry Only"])
@@ -182,6 +183,42 @@ class AppControlTests(unittest.TestCase):
 
         self.assertTrue(result.success)
         self.assertEqual(opened, [r"shell:AppsFolder\MSTeams_8wekyb3d8bbwe!MSTeams"])
+
+    def test_launcher_returns_cancelled_when_windows_launch_is_cancelled(self):
+        def cancelled_opener(path):
+            error = OSError("operation cancelled")
+            error.winerror = 1223
+            raise error
+
+        with tempfile.TemporaryDirectory() as tmp:
+            shortcut = Path(tmp) / "Roblox.lnk"
+            shortcut.write_text("", encoding="utf-8")
+            index_path = Path(tmp) / "apps.json"
+            AppIndex(index_path).save([AppEntry(name="Roblox", path=str(shortcut))])
+            launcher = AppLauncher(AppIndex(index_path), opener=cancelled_opener)
+
+            result = launcher.open_app("Roblox")
+
+        self.assertFalse(result.success)
+        self.assertEqual(result.error, "launch_cancelled")
+        self.assertIn("operation cancelled", result.detail)
+
+    def test_launcher_returns_failure_for_other_launch_errors(self):
+        def failing_opener(path):
+            raise OSError("broken shortcut")
+
+        with tempfile.TemporaryDirectory() as tmp:
+            shortcut = Path(tmp) / "Broken.lnk"
+            shortcut.write_text("", encoding="utf-8")
+            index_path = Path(tmp) / "apps.json"
+            AppIndex(index_path).save([AppEntry(name="Broken", path=str(shortcut))])
+            launcher = AppLauncher(AppIndex(index_path), opener=failing_opener)
+
+            result = launcher.open_app("Broken")
+
+        self.assertFalse(result.success)
+        self.assertEqual(result.error, "launch_failed")
+        self.assertIn("broken shortcut", result.detail)
 
     def test_service_refreshes_index_from_scanner(self):
         with tempfile.TemporaryDirectory() as tmp:

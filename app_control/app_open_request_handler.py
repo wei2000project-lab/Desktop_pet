@@ -1,3 +1,4 @@
+import math
 import threading
 from datetime import datetime
 
@@ -5,6 +6,7 @@ from app_control.app_confidence import decide_app_open_action
 from app_control.app_open_service import AppOpenService, default_app_index_path
 from app_control.app_schedule import AppOpenScheduler, parse_schedule_delay
 from app_control.app_selector import AppSelector
+from utils.logger import logger
 
 
 class AppOpenRequestHandler:
@@ -94,9 +96,20 @@ class AppOpenRequestHandler:
         self.bus.publish("ai_message_error", _selection_error_message(selection.error))
 
     def handle_app_open_confirmed(self, app_name: str):
-        result = self.service.open_app_by_name(app_name)
+        try:
+            result = self.service.open_app_by_name(app_name)
+        except Exception as exc:
+            logger.error(f"Unexpected error while opening {app_name}: {exc}", exc_info=True)
+            self.bus.publish("ai_message_error", f"無法開啟 {app_name}：發生未預期的錯誤。")
+            return
+
         if result.success:
             self.bus.publish("ai_message_chunk", f"已開啟 {result.app_name}。")
+            self.bus.publish("ai_message_finished", "")
+            return
+
+        if result.error == "launch_cancelled":
+            self.bus.publish("ai_message_chunk", _launch_error_message(result.error, result.app_name))
             self.bus.publish("ai_message_finished", "")
             return
 
@@ -112,7 +125,7 @@ class AppOpenRequestHandler:
             self.bus.publish("ai_message_error", f"找不到 {app_name} 的排程開啟請求。")
             return
 
-        remaining_seconds = int((pending["run_at"] - self.now_fn()).total_seconds())
+        remaining_seconds = math.ceil((pending["run_at"] - self.now_fn()).total_seconds())
         if remaining_seconds <= 0:
             self.bus.publish("ai_message_error", f"{app_name} 的排程時間已經過了，已取消開啟。")
             return
@@ -199,13 +212,24 @@ class AppOpenRequestHandler:
         self.handle_app_open_confirmed(selection.app_name)
 
     def _open_scheduled_app(self, app_name: str):
-        result = self.service.open_app_by_name(app_name)
-        if result.success:
-            self.bus.publish("ai_message_chunk", f"排程時間到，已開啟 {result.app_name}。")
-            self.bus.publish("ai_message_finished", "")
+        try:
+            result = self.service.open_app_by_name(app_name)
+        except Exception as exc:
+            logger.error(f"Unexpected error while opening scheduled app {app_name}: {exc}", exc_info=True)
+            self.bus.publish(
+                "chat_system_notification",
+                f"排程時間到，但無法開啟 {app_name}：發生未預期的錯誤。",
+                True,
+            )
             return
 
-        self.bus.publish("ai_message_error", _launch_error_message(result.error, result.app_name))
+        if result.success:
+            self.bus.publish("chat_system_notification", f"排程時間到，已開啟 {result.app_name}。", False)
+            return
+
+        message = _launch_error_message(result.error, result.app_name)
+        message = f"排程時間到，但{message}"
+        self.bus.publish("chat_system_notification", message, result.error != "launch_cancelled")
 
     def _should_confirm_before_open(self) -> bool:
         if self.confirm_before_open is not None:
@@ -254,6 +278,8 @@ def _launch_error_message(error: str, app_name: str) -> str:
     messages = {
         "app_not_found": f"找不到應用程式：{app_name}",
         "shortcut_not_found": f"{app_name} 的捷徑不存在，請重新掃描應用程式清單。",
+        "launch_cancelled": f"已取消開啟 {app_name}。",
+        "launch_failed": f"無法開啟 {app_name}，請稍後再試。",
     }
     return messages.get(error, f"無法開啟 {app_name}：{error}")
 

@@ -18,6 +18,7 @@ class ChatBubble(QWidget):
         self.is_thinking = False
         self.is_waiting_response = False
         self.ai_trailing_newlines = 0
+        self.pending_system_notifications = []
         
         # Buffer queue for incoming stream chunks to prevent UI stuttering
         self.chunk_queue = queue.Queue()
@@ -34,6 +35,7 @@ class ChatBubble(QWidget):
         event_bus.subscribe("ai_message_finished", self.on_ai_finished)
         event_bus.subscribe("ai_message_error", self.on_ai_error)
         event_bus.subscribe("ai_message_cancelled", self.on_ai_cancelled)
+        event_bus.subscribe("chat_system_notification", self.on_system_notification)
 
     def setup_ui(self):
         # Frameless, Always on Top, Tool window
@@ -298,6 +300,7 @@ class ChatBubble(QWidget):
         self.process_chunk_queue()
         if self._should_follow_output():
             self._scroll_to_bottom()
+        self._flush_system_notifications()
 
     def on_ai_error(self, error_msg: str):
         self.is_thinking = False
@@ -315,6 +318,7 @@ class ChatBubble(QWidget):
             text_color="#ff8888",
             force_scroll=True,
         )
+        self._flush_system_notifications()
 
     def on_ai_cancelled(self):
         self.is_thinking = False
@@ -331,5 +335,27 @@ class ChatBubble(QWidget):
             "已停止回覆。",
             prefix_color="#888888",
             text_color="#bbbbbb",
+            force_scroll=True,
+        )
+        self._flush_system_notifications()
+
+    def on_system_notification(self, message: str, is_error: bool = False):
+        if self.is_waiting_response:
+            self.pending_system_notifications.append((message, is_error))
+            return
+        self._append_system_notification(message, is_error)
+
+    def _flush_system_notifications(self):
+        notifications = self.pending_system_notifications
+        self.pending_system_notifications = []
+        for message, is_error in notifications:
+            self._append_system_notification(message, is_error)
+
+    def _append_system_notification(self, message: str, is_error: bool):
+        self._append_text_block(
+            "系統: ",
+            message,
+            prefix_color="#ff5555" if is_error else "#888888",
+            text_color="#ff8888" if is_error else "#bbbbbb",
             force_scroll=True,
         )
