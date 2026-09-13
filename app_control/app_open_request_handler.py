@@ -43,6 +43,10 @@ class AppOpenRequestHandler:
         self.bus.subscribe("app_scheduled_open_cancelled", self.handle_scheduled_open_cancelled)
         self.bus.subscribe("app_preference_chosen", self.handle_app_preference_chosen)
         self.bus.subscribe("app_preference_choice_cancelled", self.handle_app_preference_choice_cancelled)
+        self.bus.subscribe("app_started", self.handle_app_started)
+
+    def handle_app_started(self):
+        self.service.refresh_index_in_background()
 
     def handle_app_open_requested(self, user_text: str):
         self.bus.publish("ai_message_started")

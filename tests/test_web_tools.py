@@ -66,6 +66,52 @@ class WebToolsTests(unittest.TestCase):
         self.assertNotIn("footer should disappear", text)
         self.assertNotIn("tracking", text)
 
+    def test_extractor_keeps_text_after_sidebar_container(self):
+        html = """
+        <main>
+          <p>Article introduction before the sidebar.</p>
+          <div class="sidebar">Related links should disappear.</div>
+          <p>Article conclusion after the sidebar.</p>
+        </main>
+        """
+
+        text = WebPageExtractor().extract_text(html)
+
+        self.assertIn("Article introduction before the sidebar.", text)
+        self.assertIn("Article conclusion after the sidebar.", text)
+        self.assertNotIn("Related links should disappear.", text)
+
+    def test_extractor_skips_nested_content_until_noise_container_ends(self):
+        html = """
+        <main>
+          <div id="advert-panel">
+            Advertisement text should disappear.
+            <div><p>Nested promotion should also disappear.</p></div>
+          </div>
+          <p>Useful article content remains available.</p>
+        </main>
+        """
+
+        text = WebPageExtractor().extract_text(html)
+
+        self.assertIn("Useful article content remains available.", text)
+        self.assertNotIn("Advertisement text should disappear.", text)
+        self.assertNotIn("Nested promotion should also disappear.", text)
+
+    def test_extractor_handles_multiple_noise_containers(self):
+        html = """
+        <main>
+          <div class="cookie-banner">Cookie notice should disappear.</div>
+          <aside><p>Aside content should disappear.</p></aside>
+          <section class="promo"><p>Promotion should disappear.</p></section>
+          <p>Final article paragraph should remain.</p>
+        </main>
+        """
+
+        text = WebPageExtractor().extract_text(html)
+
+        self.assertEqual(text, "Final article paragraph should remain.")
+
     def test_context_builder_limits_items_and_summarizes(self):
         records = [
             {

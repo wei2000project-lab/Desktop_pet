@@ -19,31 +19,62 @@ class _ReadableTextParser(HTMLParser):
         "button",
     }
     BLOCK_TAGS = {"p", "div", "article", "section", "main", "br", "li", "h1", "h2", "h3"}
+    VOID_TAGS = {
+        "area",
+        "base",
+        "br",
+        "col",
+        "embed",
+        "hr",
+        "img",
+        "input",
+        "link",
+        "meta",
+        "param",
+        "source",
+        "track",
+        "wbr",
+    }
 
     def __init__(self):
         super().__init__(convert_charrefs=True)
-        self._skip_depth = 0
+        self._skip_stack: List[str] = []
         self._parts: List[str] = []
 
     def handle_starttag(self, tag, attrs):
         tag = tag.lower()
         attrs_dict = {name.lower(): value or "" for name, value in attrs}
+        if self._skip_stack:
+            if tag not in self.VOID_TAGS:
+                self._skip_stack.append(tag)
+            return
         if tag in self.SKIP_TAGS or self._is_ad_like(attrs_dict):
-            self._skip_depth += 1
+            if tag not in self.VOID_TAGS:
+                self._skip_stack.append(tag)
+            return
+        if tag in self.BLOCK_TAGS:
+            self._parts.append("\n")
+
+    def handle_startendtag(self, tag, attrs):
+        tag = tag.lower()
+        attrs_dict = {name.lower(): value or "" for name, value in attrs}
+        if self._skip_stack or tag in self.SKIP_TAGS or self._is_ad_like(attrs_dict):
             return
         if tag in self.BLOCK_TAGS:
             self._parts.append("\n")
 
     def handle_endtag(self, tag):
         tag = tag.lower()
-        if self._skip_depth and tag in self.SKIP_TAGS:
-            self._skip_depth -= 1
+        if self._skip_stack:
+            if tag in self._skip_stack:
+                matching_index = len(self._skip_stack) - 1 - self._skip_stack[::-1].index(tag)
+                del self._skip_stack[matching_index:]
             return
-        if not self._skip_depth and tag in self.BLOCK_TAGS:
+        if tag in self.BLOCK_TAGS:
             self._parts.append("\n")
 
     def handle_data(self, data):
-        if self._skip_depth:
+        if self._skip_stack:
             return
         text = data.strip()
         if text:

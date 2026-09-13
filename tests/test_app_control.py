@@ -1,5 +1,7 @@
 import json
+import os
 import tempfile
+import threading
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -132,6 +134,19 @@ class AppControlTests(unittest.TestCase):
         self.assertEqual(loaded_index.find_by_name("google chrome").path, "C:/Apps/Chrome.lnk")
         self.assertIsNone(loaded_index.find_by_name("Firefox"))
 
+    def test_app_index_replaces_saved_file_atomically(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            index_path = Path(tmp) / "apps.json"
+            index = AppIndex(index_path)
+
+            with patch("app_control.app_index.os.replace", wraps=os.replace) as replace:
+                index.save([AppEntry(name="Google Chrome", path="C:/Apps/Chrome.lnk")])
+
+            temporary_files = list(index_path.parent.glob(f".{index_path.name}.*.tmp"))
+
+        replace.assert_called_once()
+        self.assertEqual(temporary_files, [])
+
     def test_launcher_uses_index_path_and_never_accepts_direct_path(self):
         opened = []
         with tempfile.TemporaryDirectory() as tmp:
@@ -188,6 +203,100 @@ class AppControlTests(unittest.TestCase):
 
         self.assertEqual([app.name for app in apps], ["Word"])
         self.assertEqual(saved[0]["name"], "Word")
+
+    def test_service_keeps_existing_index_when_scan_returns_empty(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            index_path = Path(tmp) / "apps.json"
+            existing = AppEntry(name="Google Chrome", path="C:/Apps/Chrome.lnk")
+            AppIndex(index_path).save([existing])
+            service = AppOpenService(
+                index_path=index_path,
+                scan_roots=[],
+                opener=lambda path: None,
+                registry_records=[],
+                start_app_records=[],
+            )
+
+            with patch("app_control.app_open_service.scan_available_apps", return_value=[]):
+                apps = service.refresh_index()
+            saved = AppIndex(index_path).load()
+
+        self.assertEqual(apps, [existing])
+        self.assertEqual(saved, [existing])
+
+    def test_service_keeps_existing_index_when_scan_fails(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            index_path = Path(tmp) / "apps.json"
+            existing = AppEntry(name="Google Chrome", path="C:/Apps/Chrome.lnk")
+            AppIndex(index_path).save([existing])
+            service = AppOpenService(
+                index_path=index_path,
+                scan_roots=[],
+                opener=lambda path: None,
+                registry_records=[],
+                start_app_records=[],
+            )
+
+            with patch(
+                "app_control.app_open_service.scan_available_apps",
+                side_effect=RuntimeError("scan failed"),
+            ):
+                with self.assertRaisesRegex(RuntimeError, "scan failed"):
+                    service.refresh_index()
+            saved = AppIndex(index_path).load()
+
+        self.assertEqual(saved, [existing])
+
+    def test_service_refreshes_index_in_background(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            index_path = Path(tmp) / "apps.json"
+            refreshed = threading.Event()
+            service = AppOpenService(
+                index_path=index_path,
+                scan_roots=[],
+                opener=lambda path: None,
+                registry_records=[],
+                start_app_records=[],
+            )
+
+            def refresh_index():
+                refreshed.set()
+                return []
+
+            service.refresh_index = refresh_index
+            started = service.refresh_index_in_background()
+            completed = refreshed.wait(timeout=1)
+            service._refresh_thread.join(timeout=1)
+
+        self.assertTrue(started)
+        self.assertTrue(completed)
+
+    def test_service_skips_duplicate_background_refresh(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            entered = threading.Event()
+            release = threading.Event()
+            service = AppOpenService(
+                index_path=Path(tmp) / "apps.json",
+                scan_roots=[],
+                opener=lambda path: None,
+                registry_records=[],
+                start_app_records=[],
+            )
+
+            def refresh_index():
+                entered.set()
+                release.wait(timeout=1)
+                return []
+
+            service.refresh_index = refresh_index
+            first_started = service.refresh_index_in_background()
+            self.assertTrue(entered.wait(timeout=1))
+            duplicate_started = service.refresh_index_in_background()
+            release.set()
+            service._refresh_thread.join(timeout=1)
+
+        self.assertTrue(first_started)
+        self.assertFalse(duplicate_started)
 
     def test_service_refreshes_legacy_index_without_start_apps_targets(self):
         with tempfile.TemporaryDirectory() as tmp:

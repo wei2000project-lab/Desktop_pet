@@ -31,6 +31,11 @@ class FakeService:
         self.preference_change_selection = preference_change_selection or selection
         self.launch_result = launch_result or AppLaunchResult(success=True, app_name="Google Chrome", path="x")
         self.preferences = {}
+        self.background_refresh_count = 0
+
+    def refresh_index_in_background(self):
+        self.background_refresh_count += 1
+        return True
 
     def select_app_from_text(self, user_text, selector):
         self.selector = selector
@@ -57,6 +62,22 @@ class FakeScheduler:
 
 
 class AppOpenRequestHandlerTests(unittest.TestCase):
+    def test_app_started_refreshes_index_in_background(self):
+        bus = FakeEventBus()
+        service = FakeService(
+            AppSelection(action="open_app", app_name="Google Chrome", confidence=0.95, reason="上網")
+        )
+        AppOpenRequestHandler(
+            bus=bus,
+            service=service,
+            selector=FakeSelector(None),
+            run_in_background=False,
+        )
+
+        bus.subscriptions["app_started"]()
+
+        self.assertEqual(service.background_refresh_count, 1)
+
     def test_successful_selection_requests_confirmation(self):
         bus = FakeEventBus()
         service = FakeService(
