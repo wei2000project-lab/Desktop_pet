@@ -357,9 +357,9 @@ class AppControlTests(unittest.TestCase):
 
         self.assertIn("Microsoft Teams", [app.name for app in apps])
 
-    def test_default_app_index_path_lives_in_config_directory(self):
+    def test_default_app_index_path_lives_in_runtime_directory(self):
         self.assertEqual(default_app_index_path().name, "apps.json")
-        self.assertEqual(default_app_index_path().parent.name, "config")
+        self.assertEqual(default_app_index_path().parent.name, "runtime")
 
     def test_service_delegates_natural_language_selection_to_selector(self):
         class FakeSelector:

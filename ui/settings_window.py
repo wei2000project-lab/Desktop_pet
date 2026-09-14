@@ -5,7 +5,7 @@ from PySide6.QtWidgets import (
     QLabel, QLineEdit, QCheckBox, QPushButton, QFormLayout, QSlider,
     QPlainTextEdit, QMessageBox, QButtonGroup
 )
-from config.config_manager import config_manager
+from app.core.config_manager import config_manager
 from app.core.event_bus import event_bus
 from app.utils.logger import logger
 from app.ai.prompt_builder import get_personality_option_labels

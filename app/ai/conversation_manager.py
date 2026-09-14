@@ -3,7 +3,7 @@ import threading
 from typing import Dict, List, Any
 from app.utils.logger import logger
 from app.core.event_bus import event_bus
-from config.config_manager import config_manager
+from app.core.config_manager import config_manager
 from app.ai.conversation_memory import build_conversation_context_messages
 from app.ai.provider import AIProvider
 from app.ai.prompt_builder import build_system_prompt

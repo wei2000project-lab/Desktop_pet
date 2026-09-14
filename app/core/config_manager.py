@@ -1,9 +1,23 @@
 import os
 import configparser
 import json
+from pathlib import Path
 from typing import Any, Dict, List
+
 from app.ai.api_keys import decode_api_key_entries, encode_api_key_entries, first_api_key
+from app.core.data_migration import migrate_legacy_runtime_data
+from app.core.paths import CONFIG_DIR, PROJECT_ROOT, RUNTIME_DIR
 from app.utils.logger import logger
+
+
+def read_layered_ini(default_path: Path | str, runtime_path: Path | str) -> configparser.ConfigParser:
+    """Read tracked defaults first, then overlay user-owned runtime settings."""
+    parser = configparser.ConfigParser()
+    existing_paths = [str(path) for path in (default_path, runtime_path) if Path(path).exists()]
+    if existing_paths:
+        parser.read(existing_paths, encoding="utf-8")
+    return parser
+
 
 class ConfigManager:
     _instance = None
@@ -15,15 +29,19 @@ class ConfigManager:
         return cls._instance
 
     def _init(self):
-        self.config_dir = os.path.dirname(os.path.abspath(__file__))
-        self.root_dir = os.path.dirname(self.config_dir)
-        
-        self.config_ini_path = os.path.join(self.config_dir, "config.ini")
-        self.api_ini_path = os.path.join(self.config_dir, "api.ini")
-        self.prompt_json_path = os.path.join(self.config_dir, "prompt.json")
-        self.history_json_path = os.path.join(self.config_dir, "history.json")
-        self.memory_json_path = os.path.join(self.config_dir, "memory.json")
-        self.env_path = os.path.join(self.root_dir, ".env")
+        migration = migrate_legacy_runtime_data()
+        if migration.failed:
+            logger.warning("Runtime data migration incomplete: %s", ", ".join(migration.failed))
+
+        self.root_dir = str(PROJECT_ROOT)
+        self.config_dir = str(CONFIG_DIR)
+        self.default_config_ini_path = str(CONFIG_DIR / "app.defaults.ini")
+        self.config_ini_path = str(RUNTIME_DIR / "app.ini")
+        self.api_ini_path = str(RUNTIME_DIR / "api.ini")
+        self.prompt_json_path = str(CONFIG_DIR / "prompt.json")
+        self.history_json_path = str(RUNTIME_DIR / "history.json")
+        self.memory_json_path = str(RUNTIME_DIR / "memory.json")
+        self.env_path = str(PROJECT_ROOT / ".env")
 
         self.general_config = configparser.ConfigParser()
         self.api_config = configparser.ConfigParser()
@@ -45,13 +63,16 @@ class ConfigManager:
     def load_configs(self):
         """Loads ini config files."""
         # General Config
-        if os.path.exists(self.config_ini_path):
-            self.general_config.read(self.config_ini_path, encoding="utf-8")
-        else:
-            logger.warning("config.ini not found, using empty config")
+        self.general_config = read_layered_ini(
+            self.default_config_ini_path,
+            self.config_ini_path,
+        )
+        if not self.general_config.has_section("General"):
+            logger.warning("General config not found, using empty config")
             self.general_config.add_section("General")
 
         # API Config
+        self.api_config = configparser.ConfigParser()
         if os.path.exists(self.api_ini_path):
             self.api_config.read(self.api_ini_path, encoding="utf-8")
         else:
@@ -91,6 +112,7 @@ class ConfigManager:
 
     def save_general_config(self):
         try:
+            os.makedirs(os.path.dirname(self.config_ini_path), exist_ok=True)
             with open(self.config_ini_path, "w", encoding="utf-8") as f:
                 self.general_config.write(f)
         except Exception as e:
@@ -145,6 +167,7 @@ class ConfigManager:
 
     def save_api_config(self):
         try:
+            os.makedirs(os.path.dirname(self.api_ini_path), exist_ok=True)
             with open(self.api_ini_path, "w", encoding="utf-8") as f:
                 self.api_config.write(f)
         except Exception as e:
@@ -162,6 +185,7 @@ class ConfigManager:
 
     def save_prompt(self, prompt_data: Dict[str, Any]):
         try:
+            os.makedirs(os.path.dirname(self.prompt_json_path), exist_ok=True)
             with open(self.prompt_json_path, "w", encoding="utf-8") as f:
                 json.dump(prompt_data, f, ensure_ascii=False, indent=2)
         except Exception as e:
@@ -181,6 +205,7 @@ class ConfigManager:
         if len(history) > limit:
             history = history[-limit:]
         try:
+            os.makedirs(os.path.dirname(self.history_json_path), exist_ok=True)
             with open(self.history_json_path, "w", encoding="utf-8") as f:
                 json.dump(history, f, ensure_ascii=False, indent=2)
         except Exception as e:
@@ -200,6 +225,7 @@ class ConfigManager:
 
     def save_memory(self, memory: Dict[str, Any]):
         try:
+            os.makedirs(os.path.dirname(self.memory_json_path), exist_ok=True)
             with open(self.memory_json_path, "w", encoding="utf-8") as f:
                 json.dump(memory, f, ensure_ascii=False, indent=2)
         except Exception as e:

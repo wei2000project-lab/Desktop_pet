@@ -236,7 +236,7 @@ class AppOpenRequestHandler:
             return bool(self.confirm_before_open)
 
         try:
-            from config.config_manager import config_manager
+            from app.core.config_manager import config_manager
             return config_manager.get_general_bool("ConfirmBeforeOpen", True)
         except Exception:
             return True
@@ -244,7 +244,7 @@ class AppOpenRequestHandler:
 
 def _complete_with_ai_client(messages):
     from app.ai.client import AIClient
-    from config.config_manager import config_manager
+    from app.core.config_manager import config_manager
 
     api_key = config_manager.get_active_api_key()
     if not api_key:

@@ -4,7 +4,7 @@ from PySide6.QtGui import QPixmap, QMouseEvent, QAction
 from PySide6.QtWidgets import QWidget, QLabel, QVBoxLayout, QMenu
 from app.utils.logger import logger
 from app.core.event_bus import event_bus
-from config.config_manager import config_manager
+from app.core.config_manager import config_manager
 
 class DesktopPet(QWidget):
     def __init__(self):

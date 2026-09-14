@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable, Mapping
 
-from app.core.paths import PROJECT_ROOT
+from app.core.paths import APP_CONTROL_DATA_DIR
 
 
 @dataclass(frozen=True)
@@ -48,7 +48,7 @@ DEFAULT_ALIAS_CONFIG = AppAliasConfig(
 
 
 def default_app_alias_path() -> Path:
-    return PROJECT_ROOT / "config" / "app_aliases.json"
+    return APP_CONTROL_DATA_DIR / "aliases.json"
 
 
 def load_app_alias_config(alias_path: Path | str | None = None) -> AppAliasConfig:
