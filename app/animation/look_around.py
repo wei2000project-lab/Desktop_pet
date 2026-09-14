@@ -5,13 +5,21 @@ from typing import List
 class LookAroundAnimation:
     def __init__(self, base_dir: str):
         self.name = "look_around"
-        self.frame_rate_ms = 450
+        self.frame_rate_ms = 250
         front = self._frame(base_dir, "front")
+        left = self._frame(base_dir, "left")
+        right = self._frame(base_dir, "right")
         self.frames: List[str] = [
             front,
-            self._frame(base_dir, "left"),
+            left,
+            left,
+            left,
+            left,
             front,
-            self._frame(base_dir, "right"),
+            right,
+            right,
+            right,
+            right,
             front,
         ]
 

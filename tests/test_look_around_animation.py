@@ -9,7 +9,7 @@ from app.core.paths import PROJECT_ROOT
 
 
 class LookAroundAnimationTests(unittest.TestCase):
-    def test_sequence_returns_to_front_between_directions(self):
+    def test_sequence_holds_directions_for_one_second(self):
         animation = LookAroundAnimation(str(PROJECT_ROOT))
 
         self.assertEqual(
@@ -17,12 +17,20 @@ class LookAroundAnimationTests(unittest.TestCase):
             [
                 "Nova_looking_front.png",
                 "Nova_looking_left.png",
+                "Nova_looking_left.png",
+                "Nova_looking_left.png",
+                "Nova_looking_left.png",
                 "Nova_looking_front.png",
+                "Nova_looking_right.png",
+                "Nova_looking_right.png",
+                "Nova_looking_right.png",
                 "Nova_looking_right.png",
                 "Nova_looking_front.png",
             ],
         )
-        self.assertEqual(animation.frame_rate_ms, 450)
+        self.assertEqual(animation.frame_rate_ms, 250)
+        self.assertEqual(animation.frames.count(animation.frames[1]), 4)
+        self.assertEqual(animation.frames.count(animation.frames[6]), 4)
         self.assertTrue(all(pathlib.Path(path).is_file() for path in animation.frames))
 
     def test_idle_roll_selects_look_around_blink_or_no_action(self):
@@ -53,7 +61,7 @@ class LookAroundAnimationTests(unittest.TestCase):
         self.assertEqual(animator.current_state, "look_around")
         self.assertEqual(animator.active_frames, animator.look_around_anim.frames)
         self.assertEqual(animator.active_frame_index, 0)
-        animator.animation_timer.start.assert_called_once_with(450)
+        animator.animation_timer.start.assert_called_once_with(250)
 
     def test_user_activity_interrupts_look_around(self):
         animator = Animator.__new__(Animator)
