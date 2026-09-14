@@ -3,11 +3,11 @@ import re
 from dataclasses import dataclass
 from typing import Callable, Iterable, List
 
-from app_control.app_aliases import AppAliasConfig
-from app_control.app_confidence import LOW_CONFIDENCE_THRESHOLD
-from app_control.app_index import AppEntry
-from app_control.app_preferences import AppPreferenceStore
-from app_control.app_resolver import AppResolveError, resolve_app_from_text, resolve_app_name
+from app.control.resolution.aliases import AppAliasConfig
+from app.control.resolution.confidence import LOW_CONFIDENCE_THRESHOLD
+from app.control.discovery.index import AppEntry
+from app.control.preferences import AppPreferenceStore
+from app.control.resolution.resolver import AppResolveError, resolve_app_from_text, resolve_app_name
 
 
 CompletionFn = Callable[[List[dict]], str]

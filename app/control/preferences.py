@@ -1,9 +1,11 @@
 import json
 from pathlib import Path
 
+from app.core.paths import PROJECT_ROOT
+
 
 def default_app_preferences_path() -> Path:
-    return Path(__file__).resolve().parent.parent / "config" / "app_preferences.json"
+    return PROJECT_ROOT / "config" / "app_preferences.json"
 
 
 class AppPreferenceStore:

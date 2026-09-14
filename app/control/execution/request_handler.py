@@ -2,10 +2,10 @@ import math
 import threading
 from datetime import datetime
 
-from app_control.app_confidence import decide_app_open_action
-from app_control.app_open_service import AppOpenService, default_app_index_path
-from app_control.app_schedule import AppOpenScheduler, parse_schedule_delay
-from app_control.app_selector import AppSelector
+from app.control.resolution.confidence import decide_app_open_action
+from app.control.execution.service import AppOpenService, default_app_index_path
+from app.control.execution.schedule import AppOpenScheduler, parse_schedule_delay
+from app.control.resolution.selector import AppSelector
 from app.utils.logger import logger
 
 

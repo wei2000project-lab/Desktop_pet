@@ -3,6 +3,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable, Mapping
 
+from app.core.paths import PROJECT_ROOT
+
 
 @dataclass(frozen=True)
 class GenericAlias:
@@ -46,7 +48,7 @@ DEFAULT_ALIAS_CONFIG = AppAliasConfig(
 
 
 def default_app_alias_path() -> Path:
-    return Path(__file__).resolve().parent.parent / "config" / "app_aliases.json"
+    return PROJECT_ROOT / "config" / "app_aliases.json"
 
 
 def load_app_alias_config(alias_path: Path | str | None = None) -> AppAliasConfig:

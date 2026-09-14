@@ -1,8 +1,8 @@
 import unittest
 
-from app_control.app_aliases import AppAliasConfig, GenericAlias
-from app_control.app_index import AppEntry
-from app_control.app_resolver import AppResolveError, resolve_app_from_text, resolve_app_name
+from app.control.resolution.aliases import AppAliasConfig, GenericAlias
+from app.control.discovery.index import AppEntry
+from app.control.resolution.resolver import AppResolveError, resolve_app_from_text, resolve_app_name
 
 
 class AppResolverTests(unittest.TestCase):

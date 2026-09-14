@@ -1,7 +1,7 @@
 import unittest
 from datetime import datetime
 
-from app_control.app_schedule import parse_schedule_delay
+from app.control.execution.schedule import parse_schedule_delay
 
 
 class AppScheduleTests(unittest.TestCase):

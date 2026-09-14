@@ -4,7 +4,7 @@ import subprocess
 from pathlib import Path
 from typing import Iterable, List, Mapping
 
-from app_control.app_index import AppEntry
+from app.control.discovery.index import AppEntry
 
 
 SHORTCUT_EXTENSIONS = {".lnk", ".url"}

@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Optional
 
-from app_control.app_index import AppIndex
+from app.control.discovery.index import AppIndex
 
 
 @dataclass(frozen=True)

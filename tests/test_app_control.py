@@ -6,16 +6,16 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from app_control.app_index import AppEntry, AppIndex
-from app_control.app_launcher import AppLauncher
-from app_control.app_scanner import (
+from app.control.discovery.index import AppEntry, AppIndex
+from app.control.execution.launcher import AppLauncher
+from app.control.discovery.scanner import (
     _read_start_app_records,
     scan_available_apps,
     scan_installed_registry_apps,
     scan_start_apps,
     scan_start_menu_apps,
 )
-from app_control.app_open_service import AppOpenService, default_app_index_path
+from app.control.execution.service import AppOpenService, default_app_index_path
 
 
 class AppControlTests(unittest.TestCase):
@@ -98,7 +98,7 @@ class AppControlTests(unittest.TestCase):
             returncode = 0
             stdout = None
 
-        with patch("app_control.app_scanner.subprocess.run", return_value=Completed()):
+        with patch("app.control.discovery.scanner.subprocess.run", return_value=Completed()):
             records = _read_start_app_records()
 
         self.assertEqual(records, [])
@@ -140,7 +140,7 @@ class AppControlTests(unittest.TestCase):
             index_path = Path(tmp) / "apps.json"
             index = AppIndex(index_path)
 
-            with patch("app_control.app_index.os.replace", wraps=os.replace) as replace:
+            with patch("app.control.discovery.index.os.replace", wraps=os.replace) as replace:
                 index.save([AppEntry(name="Google Chrome", path="C:/Apps/Chrome.lnk")])
 
             temporary_files = list(index_path.parent.glob(f".{index_path.name}.*.tmp"))
@@ -254,7 +254,7 @@ class AppControlTests(unittest.TestCase):
                 start_app_records=[],
             )
 
-            with patch("app_control.app_open_service.scan_available_apps", return_value=[]):
+            with patch("app.control.execution.service.scan_available_apps", return_value=[]):
                 apps = service.refresh_index()
             saved = AppIndex(index_path).load()
 
@@ -275,7 +275,7 @@ class AppControlTests(unittest.TestCase):
             )
 
             with patch(
-                "app_control.app_open_service.scan_available_apps",
+                "app.control.execution.service.scan_available_apps",
                 side_effect=RuntimeError("scan failed"),
             ):
                 with self.assertRaisesRegex(RuntimeError, "scan failed"):

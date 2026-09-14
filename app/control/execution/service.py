@@ -2,17 +2,18 @@ import threading
 from pathlib import Path
 from typing import Callable, Iterable, List, Mapping, Optional
 
-from app_control.app_index import AppEntry, AppIndex
-from app_control.app_launcher import AppLaunchResult, AppLauncher
-from app_control.app_selector import AppSelection
-from app_control.app_resolver import resolve_preference_change_from_text
-from app_control.app_preferences import AppPreferenceStore, default_app_preferences_path
-from app_control.app_scanner import default_start_menu_roots, scan_available_apps
+from app.control.discovery.index import AppEntry, AppIndex
+from app.control.execution.launcher import AppLaunchResult, AppLauncher
+from app.control.resolution.selector import AppSelection
+from app.control.resolution.resolver import resolve_preference_change_from_text
+from app.control.preferences import AppPreferenceStore, default_app_preferences_path
+from app.control.discovery.scanner import default_start_menu_roots, scan_available_apps
+from app.core.paths import PROJECT_ROOT
 from app.utils.logger import logger
 
 
 def default_app_index_path() -> Path:
-    return Path(__file__).resolve().parent.parent / "config" / "apps.json"
+    return PROJECT_ROOT / "config" / "apps.json"
 
 
 class AppOpenService:

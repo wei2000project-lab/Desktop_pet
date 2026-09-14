@@ -1,6 +1,6 @@
 import unittest
 
-from app_control.app_confidence import decide_app_open_action
+from app.control.resolution.confidence import decide_app_open_action
 
 
 class AppConfidenceTests(unittest.TestCase):

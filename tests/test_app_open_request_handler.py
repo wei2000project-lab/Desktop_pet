@@ -1,9 +1,9 @@
 import unittest
 from datetime import datetime, timedelta
 
-from app_control.app_launcher import AppLaunchResult
-from app_control.app_open_request_handler import AppOpenRequestHandler
-from app_control.app_selector import AppSelection
+from app.control.execution.launcher import AppLaunchResult
+from app.control.execution.request_handler import AppOpenRequestHandler
+from app.control.resolution.selector import AppSelection
 
 
 class FakeEventBus:

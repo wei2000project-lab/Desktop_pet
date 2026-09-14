@@ -2,7 +2,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from app_control.app_preferences import AppPreferenceStore
+from app.control.preferences import AppPreferenceStore
 
 
 class AppPreferenceStoreTests(unittest.TestCase):

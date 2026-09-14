@@ -3,7 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from app_control.app_aliases import AppAliasConfig, load_app_alias_config
+from app.control.resolution.aliases import AppAliasConfig, load_app_alias_config
 
 
 class AppAliasConfigTests(unittest.TestCase):

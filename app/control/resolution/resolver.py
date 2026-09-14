@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 from typing import Iterable, List, Mapping
 
-from app_control.app_aliases import AppAliasConfig, load_app_alias_config
-from app_control.app_index import AppEntry
+from app.control.resolution.aliases import AppAliasConfig, load_app_alias_config
+from app.control.discovery.index import AppEntry
 
 
 class AppResolveError:

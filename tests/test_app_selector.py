@@ -1,10 +1,10 @@
 import unittest
 
-from app_control.app_aliases import AppAliasConfig, GenericAlias
-from app_control.app_index import AppEntry
-from app_control.app_preferences import AppPreferenceStore
-from app_control.app_resolver import resolve_preference_change_from_text
-from app_control.app_selector import AppSelection, AppSelector, parse_app_selection
+from app.control.resolution.aliases import AppAliasConfig, GenericAlias
+from app.control.discovery.index import AppEntry
+from app.control.preferences import AppPreferenceStore
+from app.control.resolution.resolver import resolve_preference_change_from_text
+from app.control.resolution.selector import AppSelection, AppSelector, parse_app_selection
 
 
 class AppSelectorTests(unittest.TestCase):
