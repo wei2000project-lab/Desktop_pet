@@ -6,8 +6,8 @@ from PySide6.QtWidgets import (
     QLineEdit, QPushButton, QLabel, QFrame
 )
 import queue
-from utils.logger import logger
-from core.event_bus import event_bus
+from app.utils.logger import logger
+from app.core.event_bus import event_bus
 from config.config_manager import config_manager
 from ui.message_formatting import normalize_chat_text, normalize_stream_chunk, should_auto_scroll
 

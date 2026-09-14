@@ -1,7 +1,7 @@
 import threading
 from threading import Event
 from typing import Dict, List, Any, Callable
-from utils.logger import logger
+from app.utils.logger import logger
 from ai.client import AIClient
 
 

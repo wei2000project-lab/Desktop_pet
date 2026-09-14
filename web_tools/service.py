@@ -1,6 +1,6 @@
 from typing import Callable, Dict, List
 
-from utils.logger import logger
+from app.utils.logger import logger
 from web_tools.context import WebContextBuilder
 from web_tools.decision import WebSearchDecider
 from web_tools.extractor import WebPageExtractor

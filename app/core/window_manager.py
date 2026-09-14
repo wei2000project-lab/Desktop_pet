@@ -1,7 +1,7 @@
 from typing import Optional
 from PySide6.QtCore import QPoint
-from utils.logger import logger
-from core.event_bus import event_bus
+from app.utils.logger import logger
+from app.core.event_bus import event_bus
 
 class WindowManager:
     def __init__(self):

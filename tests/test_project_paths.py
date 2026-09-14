@@ -29,6 +29,11 @@ class ProjectPathsTests(unittest.TestCase):
     def test_dotenv_location_can_be_derived_from_project_root(self):
         self.assertEqual(PROJECT_ROOT / ".env", Path(__file__).resolve().parent.parent / ".env")
 
+    def test_logger_still_writes_under_project_logs_directory(self):
+        from app.utils import logger as logger_module
+
+        self.assertEqual(Path(logger_module.default_log_path), LOGS_DIR / "app.log")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -8,7 +8,7 @@ from app_control.app_selector import AppSelection
 from app_control.app_resolver import resolve_preference_change_from_text
 from app_control.app_preferences import AppPreferenceStore, default_app_preferences_path
 from app_control.app_scanner import default_start_menu_roots, scan_available_apps
-from utils.logger import logger
+from app.utils.logger import logger
 
 
 def default_app_index_path() -> Path:

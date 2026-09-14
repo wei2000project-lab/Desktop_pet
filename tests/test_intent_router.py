@@ -1,7 +1,7 @@
 import unittest
 
-from intent.intent_router import IntentType, route_intent
-from intent.user_message_router import UserMessageRouter
+from app.core.intent_router import IntentType, route_intent
+from app.core.user_message_router import UserMessageRouter
 from app_control.app_open_request_handler import AppOpenRequestHandler
 
 

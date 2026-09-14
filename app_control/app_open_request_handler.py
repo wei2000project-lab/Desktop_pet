@@ -6,7 +6,7 @@ from app_control.app_confidence import decide_app_open_action
 from app_control.app_open_service import AppOpenService, default_app_index_path
 from app_control.app_schedule import AppOpenScheduler, parse_schedule_delay
 from app_control.app_selector import AppSelector
-from utils.logger import logger
+from app.utils.logger import logger
 
 
 class AppOpenRequestHandler:
@@ -21,7 +21,7 @@ class AppOpenRequestHandler:
         now_fn=None,
     ):
         if bus is None:
-            from core.event_bus import event_bus
+            from app.core.event_bus import event_bus
             bus = event_bus
 
         self.bus = bus

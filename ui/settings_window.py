@@ -6,8 +6,8 @@ from PySide6.QtWidgets import (
     QPlainTextEdit, QMessageBox, QButtonGroup
 )
 from config.config_manager import config_manager
-from core.event_bus import event_bus
-from utils.logger import logger
+from app.core.event_bus import event_bus
+from app.utils.logger import logger
 from ai.prompt_builder import get_personality_option_labels
 
 class NumberInputWithButtons(QWidget):

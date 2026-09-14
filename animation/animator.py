@@ -3,8 +3,8 @@ import random
 import time
 from typing import Dict, List, Optional
 from PySide6.QtCore import QObject, QTimer, Slot
-from utils.logger import logger
-from core.event_bus import event_bus
+from app.utils.logger import logger
+from app.core.event_bus import event_bus
 from config.config_manager import config_manager
 from animation.blink import BlinkAnimation
 from animation.reading import ReadingAnimation

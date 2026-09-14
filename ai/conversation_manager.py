@@ -1,8 +1,8 @@
 import json
 import threading
 from typing import Dict, List, Any
-from utils.logger import logger
-from core.event_bus import event_bus
+from app.utils.logger import logger
+from app.core.event_bus import event_bus
 from config.config_manager import config_manager
 from ai.conversation_memory import build_conversation_context_messages
 from ai.provider import AIProvider

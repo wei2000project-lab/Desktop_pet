@@ -2,7 +2,7 @@ import json
 import queue
 import requests
 from typing import Dict, List, Any, Callable
-from utils.logger import logger
+from app.utils.logger import logger
 
 
 class AIClient:

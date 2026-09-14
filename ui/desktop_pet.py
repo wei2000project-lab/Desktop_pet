@@ -2,8 +2,8 @@ import os
 from PySide6.QtCore import Qt, QPoint, QSize
 from PySide6.QtGui import QPixmap, QMouseEvent, QAction
 from PySide6.QtWidgets import QWidget, QLabel, QVBoxLayout, QMenu
-from utils.logger import logger
-from core.event_bus import event_bus
+from app.utils.logger import logger
+from app.core.event_bus import event_bus
 from config.config_manager import config_manager
 
 class DesktopPet(QWidget):

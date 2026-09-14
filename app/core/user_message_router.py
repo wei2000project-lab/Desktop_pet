@@ -1,4 +1,4 @@
-from intent.intent_router import IntentType, route_intent
+from app.core.intent_router import IntentType, route_intent
 
 
 class UserMessageRouter:

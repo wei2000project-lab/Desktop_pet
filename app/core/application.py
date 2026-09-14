@@ -1,8 +1,8 @@
 import sys
 from PySide6.QtWidgets import QApplication
-from utils.logger import logger
-from core.event_bus import event_bus
-from core.window_manager import WindowManager
+from app.utils.logger import logger
+from app.core.event_bus import event_bus
+from app.core.window_manager import WindowManager
 
 class NovaApplication:
     def __init__(self):

@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import QMessageBox
 
-from core.event_bus import event_bus
+from app.core.event_bus import event_bus
 
 
 class AppOpenConfirmation:

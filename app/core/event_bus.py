@@ -1,7 +1,7 @@
 import threading
 from typing import Callable, Any, Dict, List
 from PySide6.QtCore import QObject, Signal, Slot
-from utils.logger import logger
+from app.utils.logger import logger
 
 class EventBus(QObject):
     # Signal used to safely dispatch events on the main thread
