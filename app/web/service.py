@@ -1,10 +1,10 @@
 from typing import Callable, Dict, List
 
 from app.utils.logger import logger
-from web_tools.context import WebContextBuilder
-from web_tools.decision import WebSearchDecider
-from web_tools.extractor import WebPageExtractor
-from web_tools.search import WebSearchProvider
+from app.web.context import WebContextBuilder
+from app.web.decision import WebSearchDecider
+from app.web.extractor import WebPageExtractor
+from app.web.search import WebSearchProvider
 
 
 class WebToolService:
@@ -71,7 +71,7 @@ class WebToolService:
         if not api_key:
             return self.decider.fallback_decision(user_text)
         try:
-            from ai.client import AIClient
+            from app.ai.client import AIClient
 
             client = AIClient(api_url, api_key, model, verify_ssl=verify_ssl, timeout=20.0)
             raw = client.request_completion(

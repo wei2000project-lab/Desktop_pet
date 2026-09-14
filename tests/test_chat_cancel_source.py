@@ -15,7 +15,7 @@ class ChatCancelSourceTests(unittest.TestCase):
         self.assertIn('"ai_message_cancelled"', source)
 
     def test_conversation_manager_subscribes_to_cancel_event(self):
-        source = pathlib.Path("ai/conversation_manager.py").read_text(encoding="utf-8")
+        source = pathlib.Path("app/ai/conversation_manager.py").read_text(encoding="utf-8")
 
         self.assertIn('"chat_response_cancel_requested"', source)
         self.assertIn("handle_cancel_requested", source)
@@ -54,8 +54,8 @@ class ChatCancelSourceTests(unittest.TestCase):
         self.assertEqual(bubble.appended, [("排程時間到", False)])
 
     def test_provider_and_client_have_cancel_hooks(self):
-        provider_source = pathlib.Path("ai/provider.py").read_text(encoding="utf-8")
-        client_source = pathlib.Path("ai/client.py").read_text(encoding="utf-8")
+        provider_source = pathlib.Path("app/ai/provider.py").read_text(encoding="utf-8")
+        client_source = pathlib.Path("app/ai/client.py").read_text(encoding="utf-8")
 
         self.assertIn("def cancel", provider_source)
         self.assertIn("should_cancel", provider_source)

@@ -4,7 +4,7 @@ import unittest
 
 class RoutingSourceTests(unittest.TestCase):
     def test_conversation_manager_uses_routed_chat_event(self):
-        source = pathlib.Path("ai/conversation_manager.py").read_text(encoding="utf-8")
+        source = pathlib.Path("app/ai/conversation_manager.py").read_text(encoding="utf-8")
 
         self.assertIn("chat_message_requested", source)
         self.assertNotIn('"user_message_sent"', source)

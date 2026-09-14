@@ -4,10 +4,10 @@ from typing import Dict, List, Any
 from app.utils.logger import logger
 from app.core.event_bus import event_bus
 from config.config_manager import config_manager
-from ai.conversation_memory import build_conversation_context_messages
-from ai.provider import AIProvider
-from ai.prompt_builder import build_system_prompt
-from web_tools.service import WebToolService
+from app.ai.conversation_memory import build_conversation_context_messages
+from app.ai.provider import AIProvider
+from app.ai.prompt_builder import build_system_prompt
+from app.web.service import WebToolService
 
 class ConversationManager:
     def __init__(self):

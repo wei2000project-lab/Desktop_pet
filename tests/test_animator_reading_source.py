@@ -4,7 +4,7 @@ import unittest
 
 class AnimatorReadingSourceTests(unittest.TestCase):
     def test_animator_enters_reading_after_five_idle_minutes(self):
-        source = pathlib.Path("animation/animator.py").read_text(encoding="utf-8")
+        source = pathlib.Path("app/animation/animator.py").read_text(encoding="utf-8")
 
         self.assertIn("DEFAULT_IDLE_TO_READING_SECONDS = 300", source)
         self.assertIn("self.idle_to_reading_seconds = self._load_idle_to_reading_seconds()", source)
@@ -15,7 +15,7 @@ class AnimatorReadingSourceTests(unittest.TestCase):
         self.assertIn("def on_config_updated", source)
 
     def test_animator_resets_reading_on_user_activity(self):
-        source = pathlib.Path("animation/animator.py").read_text(encoding="utf-8")
+        source = pathlib.Path("app/animation/animator.py").read_text(encoding="utf-8")
 
         self.assertIn('"user_activity"', source)
         self.assertIn('"user_message_sent"', source)
@@ -24,7 +24,7 @@ class AnimatorReadingSourceTests(unittest.TestCase):
         self.assertIn("self.reading_action_timer.stop()", source)
 
     def test_animator_schedules_random_reading_actions(self):
-        source = pathlib.Path("animation/animator.py").read_text(encoding="utf-8")
+        source = pathlib.Path("app/animation/animator.py").read_text(encoding="utf-8")
 
         self.assertIn("READING_ACTION_MIN_MS", source)
         self.assertIn("READING_ACTION_MAX_MS", source)

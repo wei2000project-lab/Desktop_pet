@@ -1,11 +1,11 @@
 import unittest
 
-from web_tools.context import WebContextBuilder
-from web_tools.decision import WebSearchDecision, WebSearchDecider
-from web_tools.extractor import WebPageExtractor
-from web_tools.search import WebSearchProvider
-from web_tools.search import WebSearchResult
-from web_tools.service import WebToolService
+from app.web.context import WebContextBuilder
+from app.web.decision import WebSearchDecision, WebSearchDecider
+from app.web.extractor import WebPageExtractor
+from app.web.search import WebSearchProvider
+from app.web.search import WebSearchResult
+from app.web.service import WebToolService
 
 
 class WebToolsTests(unittest.TestCase):

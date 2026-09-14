@@ -243,7 +243,7 @@ class AppOpenRequestHandler:
 
 
 def _complete_with_ai_client(messages):
-    from ai.client import AIClient
+    from app.ai.client import AIClient
     from config.config_manager import config_manager
 
     api_key = config_manager.get_active_api_key()

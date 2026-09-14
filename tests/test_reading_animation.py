@@ -1,7 +1,7 @@
 import pathlib
 import unittest
 
-from animation.reading import ReadingAnimation
+from app.animation.reading import ReadingAnimation
 
 
 class ReadingAnimationTests(unittest.TestCase):

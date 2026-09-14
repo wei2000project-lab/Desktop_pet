@@ -1,6 +1,6 @@
 import unittest
 
-from ai.api_keys import decode_api_key_entries, encode_api_key_entries, first_api_key
+from app.ai.api_keys import decode_api_key_entries, encode_api_key_entries, first_api_key
 
 
 class ApiKeysTests(unittest.TestCase):

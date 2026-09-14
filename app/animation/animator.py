@@ -6,8 +6,8 @@ from PySide6.QtCore import QObject, QTimer, Slot
 from app.utils.logger import logger
 from app.core.event_bus import event_bus
 from config.config_manager import config_manager
-from animation.blink import BlinkAnimation
-from animation.reading import ReadingAnimation
+from app.animation.blink import BlinkAnimation
+from app.animation.reading import ReadingAnimation
 
 class Animator(QObject):
     DEFAULT_IDLE_TO_READING_SECONDS = 300

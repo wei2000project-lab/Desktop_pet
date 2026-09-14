@@ -37,8 +37,8 @@ sys.modules.setdefault(
     ),
 )
 
-import ai.conversation_manager as conversation_manager_module
-from ai.conversation_manager import ConversationManager
+import app.ai.conversation_manager as conversation_manager_module
+from app.ai.conversation_manager import ConversationManager
 
 
 class FakeConfigManager:

@@ -8,7 +8,7 @@ from PySide6.QtWidgets import (
 from config.config_manager import config_manager
 from app.core.event_bus import event_bus
 from app.utils.logger import logger
-from ai.prompt_builder import get_personality_option_labels
+from app.ai.prompt_builder import get_personality_option_labels
 
 class NumberInputWithButtons(QWidget):
     """Custom widget containing a minus button, a centered QLineEdit, and a plus button."""
@@ -466,7 +466,7 @@ class SettingsWindow(QWidget):
             return
 
         try:
-            from ai.client import AIClient
+            from app.ai.client import AIClient
 
             client = AIClient(
                 base_url=self.base_url_input.text().strip() or "https://api.openai.com/v1",

@@ -1,6 +1,6 @@
 import unittest
 
-from ai.prompt_builder import build_system_prompt
+from app.ai.prompt_builder import build_system_prompt
 
 
 class PromptBuilderTests(unittest.TestCase):

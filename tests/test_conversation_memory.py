@@ -1,6 +1,6 @@
 import unittest
 
-from ai.conversation_memory import build_conversation_context_messages
+from app.ai.conversation_memory import build_conversation_context_messages
 
 
 class ConversationMemoryTests(unittest.TestCase):

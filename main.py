@@ -3,8 +3,8 @@ import os
 from app.utils.logger import logger
 from app.core.event_bus import event_bus
 from app.core.application import NovaApplication
-from animation.animator import Animator
-from ai.conversation_manager import ConversationManager
+from app.animation.animator import Animator
+from app.ai.conversation_manager import ConversationManager
 from app.core.user_message_router import UserMessageRouter
 from app_control.app_open_request_handler import AppOpenRequestHandler
 from ui.desktop_pet import DesktopPet

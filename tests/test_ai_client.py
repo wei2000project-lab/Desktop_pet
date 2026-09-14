@@ -13,8 +13,8 @@ sys.modules.setdefault(
         ),
     ),
 )
-from ai.client import AIClient
-import ai.client as client_module
+from app.ai.client import AIClient
+import app.ai.client as client_module
 
 
 class AIClientPayloadTests(unittest.TestCase):
