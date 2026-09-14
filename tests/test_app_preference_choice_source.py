@@ -11,8 +11,8 @@ class AppPreferenceChoiceSourceTests(unittest.TestCase):
         self.assertIn("app_preference_choice_cancelled", source)
         self.assertIn("QInputDialog.getItem", source)
 
-    def test_main_initializes_preference_choice_ui(self):
-        source = pathlib.Path("main.py").read_text(encoding="utf-8")
+    def test_application_initializes_preference_choice_ui(self):
+        source = pathlib.Path("app/core/application.py").read_text(encoding="utf-8")
 
         self.assertIn("AppPreferenceChoice", source)
 

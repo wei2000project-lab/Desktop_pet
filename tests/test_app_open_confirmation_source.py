@@ -11,8 +11,8 @@ class AppOpenConfirmationSourceTests(unittest.TestCase):
         self.assertIn("app_open_cancelled", source)
         self.assertIn("QMessageBox.question", source)
 
-    def test_main_initializes_confirmation_ui(self):
-        source = pathlib.Path("main.py").read_text(encoding="utf-8")
+    def test_application_initializes_confirmation_ui(self):
+        source = pathlib.Path("app/core/application.py").read_text(encoding="utf-8")
 
         self.assertIn("AppOpenConfirmation", source)
 

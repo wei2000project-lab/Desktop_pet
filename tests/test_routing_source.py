@@ -9,8 +9,8 @@ class RoutingSourceTests(unittest.TestCase):
         self.assertIn("chat_message_requested", source)
         self.assertNotIn('"user_message_sent"', source)
 
-    def test_main_initializes_user_message_router(self):
-        source = pathlib.Path("main.py").read_text(encoding="utf-8")
+    def test_application_initializes_user_message_router(self):
+        source = pathlib.Path("app/core/application.py").read_text(encoding="utf-8")
 
         self.assertIn("UserMessageRouter(event_bus)", source)
         self.assertIn("AppOpenRequestHandler(event_bus)", source)

@@ -169,8 +169,7 @@ class DesktopPet(QWidget):
 
     def mouseDoubleClickEvent(self, event: QMouseEvent):
         if event.button() == Qt.LeftButton:
-            # Toggle chat bubble
-            event_bus.publish("show_bubble")
+            event_bus.publish("toggle_bubble")
             event.accept()
 
     def contextMenuEvent(self, event):

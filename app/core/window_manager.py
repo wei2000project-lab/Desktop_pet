@@ -12,6 +12,7 @@ class WindowManager:
         # Subscribe to window-related events
         event_bus.subscribe("show_bubble", self.show_bubble)
         event_bus.subscribe("hide_bubble", self.hide_bubble)
+        event_bus.subscribe("toggle_bubble", self.toggle_bubble)
         event_bus.subscribe("show_settings", self.show_settings)
         event_bus.subscribe("pet_moved", self.on_pet_moved)
         event_bus.subscribe("config_updated", self.on_config_updated)
@@ -39,6 +40,14 @@ class WindowManager:
         if self.bubble_window:
             self.bubble_window.hide()
             logger.info("Bubble window hidden")
+
+    def toggle_bubble(self):
+        if not self.bubble_window:
+            return
+        if self.bubble_window.isVisible():
+            self.hide_bubble()
+            return
+        self.show_bubble()
 
     def show_settings(self):
         if not self.settings_window:

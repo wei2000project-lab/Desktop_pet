@@ -1,8 +1,20 @@
 import sys
+
 from PySide6.QtWidgets import QApplication
+
+from app.ai.conversation_manager import ConversationManager
+from app.animation.animator import Animator
+from app.control.execution.request_handler import AppOpenRequestHandler
 from app.utils.logger import logger
 from app.core.event_bus import event_bus
+from app.core.paths import PROJECT_ROOT
+from app.core.user_message_router import UserMessageRouter
 from app.core.window_manager import WindowManager
+from ui.app_open_confirmation import AppOpenConfirmation
+from ui.app_preference_choice import AppPreferenceChoice
+from ui.bubble import ChatBubble
+from ui.desktop_pet import DesktopPet
+
 
 class NovaApplication:
     def __init__(self):
@@ -10,22 +22,34 @@ class NovaApplication:
         self.app = QApplication(sys.argv)
         self.app.setQuitOnLastWindowClosed(False)
 
-        # Initialize WindowManager
         self.window_manager = WindowManager()
-        
-        # Connect app clean up on shutdown
+        self.animator = Animator(str(PROJECT_ROOT))
+        self.user_message_router = UserMessageRouter(event_bus)
+        self.conversation_manager = ConversationManager()
+        self.app_open_handler = AppOpenRequestHandler(event_bus)
+        self.app_open_confirmation = AppOpenConfirmation(event_bus)
+        self.app_preference_choice = AppPreferenceChoice(event_bus)
+
+        self.pet_window = DesktopPet()
+        self.bubble_window = ChatBubble()
+        self.window_manager.set_pet_window(self.pet_window)
+        self.window_manager.set_bubble_window(self.bubble_window)
+
         self.app.aboutToQuit.connect(self.on_shutdown)
 
     def run(self) -> int:
         logger.info("Starting Nova Application Main Loop")
         self.window_manager.show_pet()
-        
-        # Publish startup event
         event_bus.publish("app_started")
-        
-        ret = self.app.exec()
-        return ret
+        return self.app.exec()
 
     def on_shutdown(self):
         logger.info("Application shutting down...")
         event_bus.publish("app_shutdown")
+
+
+def run_application() -> int:
+    logger.info("========================================")
+    logger.info("Starting Nova Desktop Assistant...")
+    logger.info("========================================")
+    return NovaApplication().run()
