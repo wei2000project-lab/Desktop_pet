@@ -7,10 +7,13 @@ from app.utils.logger import logger
 from app.core.event_bus import event_bus
 from app.core.config_manager import config_manager
 from app.animation.blink import BlinkAnimation
+from app.animation.look_around import LookAroundAnimation
 from app.animation.reading import ReadingAnimation
 
 class Animator(QObject):
     DEFAULT_IDLE_TO_READING_SECONDS = 300
+    LOOK_AROUND_CHANCE = 0.03
+    BLINK_CHANCE = 0.17
     READING_ACTION_MIN_MS = 1500
     READING_ACTION_MAX_MS = 5000
 
@@ -21,6 +24,7 @@ class Animator(QObject):
         
         # Load blink animation
         self.blink_anim = BlinkAnimation(base_dir)
+        self.look_around_anim = LookAroundAnimation(base_dir)
         self.reading_anim = ReadingAnimation(base_dir)
 
         self.current_state = "idle"
@@ -50,6 +54,7 @@ class Animator(QObject):
             "user_activity",
             "show_bubble",
             "hide_bubble",
+            "toggle_bubble",
             "show_settings",
             "pet_moved",
             "user_message_sent",
@@ -76,7 +81,10 @@ class Animator(QObject):
             self.enter_reading()
             return
 
-        if random.random() < 0.2: # 20% chance
+        idle_action_roll = random.random()
+        if idle_action_roll < self.LOOK_AROUND_CHANCE:
+            self.play_animation("look_around")
+        elif idle_action_roll < self.LOOK_AROUND_CHANCE + self.BLINK_CHANCE:
             self.play_animation("blink")
 
     def play_animation(self, anim_name: str):
@@ -86,6 +94,12 @@ class Animator(QObject):
             self.active_frame_index = 0
             self.animation_timer.start(self.blink_anim.frame_rate_ms)
             logger.debug("Playing blink animation")
+        elif anim_name == "look_around":
+            self.current_state = "look_around"
+            self.active_frames = self.look_around_anim.frames
+            self.active_frame_index = 0
+            self.animation_timer.start(self.look_around_anim.frame_rate_ms)
+            logger.debug("Playing look around animation")
         elif anim_name == "reading":
             self.enter_reading()
         else:
@@ -135,7 +149,7 @@ class Animator(QObject):
 
     def on_user_activity(self, *args, **kwargs):
         self.last_activity_at = time.monotonic()
-        if self.current_state in ("reading", "reading_action"):
+        if self.current_state in ("reading", "reading_action", "look_around"):
             self.reading_action_timer.stop()
             self.animation_timer.stop()
             self.current_state = "idle"
