@@ -17,7 +17,7 @@ class Animator(QObject):
     def __init__(self, base_dir: str):
         super().__init__()
         self.base_dir = base_dir
-        self.idle_image_path = os.path.join(base_dir, "assets", "images", "Nova.png")
+        self.idle_image_path = os.path.join(base_dir, "assets", "emotions", "Nova_idle.png")
         
         # Load blink animation
         self.blink_anim = BlinkAnimation(base_dir)

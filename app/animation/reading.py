@@ -7,7 +7,7 @@ class ReadingAnimation:
     def __init__(self, base_dir: str):
         self.name = "reading"
         self.frame_rate_ms = 140
-        self.idle_frame = os.path.join(base_dir, "assets", "animations", "Reading", "reading_01.png")
+        self.idle_frame = os.path.join(base_dir, "assets", "animations", "reading", "reading_01.png")
         self.blink_frames: List[str] = [
             self._frame(base_dir, 1),
             self._frame(base_dir, 2),
@@ -29,4 +29,4 @@ class ReadingAnimation:
 
     @staticmethod
     def _frame(base_dir: str, index: int) -> str:
-        return os.path.join(base_dir, "assets", "animations", "Reading", f"reading_{index:02d}.png")
+        return os.path.join(base_dir, "assets", "animations", "reading", f"reading_{index:02d}.png")

@@ -31,9 +31,6 @@ config/apps.json
 config/app_preferences.json
 data/runtime/
 
-# Local refactor safety backups (may contain credentials and user data)
-.refactor-backup/
-
 # Logs
 logs/
 *.log
