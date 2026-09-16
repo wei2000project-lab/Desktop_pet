@@ -1,6 +1,6 @@
 import unittest
 
-from ui.message_formatting import (
+from ui.pet.message_formatting import (
     normalize_chat_text,
     normalize_stream_chunk,
     should_auto_scroll,

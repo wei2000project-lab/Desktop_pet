@@ -9,10 +9,10 @@ from app.utils.logger import logger
 from app.core.event_bus import event_bus
 from app.core.user_message_router import UserMessageRouter
 from app.core.window_manager import WindowManager
-from ui.app_open_confirmation import AppOpenConfirmation
-from ui.app_preference_choice import AppPreferenceChoice
-from ui.bubble import ChatBubble
-from ui.desktop_pet import DesktopPet
+from ui.pet.bubble import ChatBubble
+from ui.pet.desktop_pet import DesktopPet
+from ui.pet.dialogs.app_open_confirmation import AppOpenConfirmation
+from ui.pet.dialogs.app_preference_choice import AppPreferenceChoice
 
 
 class NovaApplication:

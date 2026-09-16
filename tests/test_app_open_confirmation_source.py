@@ -4,7 +4,7 @@ import unittest
 
 class AppOpenConfirmationSourceTests(unittest.TestCase):
     def test_confirmation_ui_subscribes_to_confirmation_event(self):
-        source = pathlib.Path("ui/app_open_confirmation.py").read_text(encoding="utf-8")
+        source = pathlib.Path("ui/pet/dialogs/app_open_confirmation.py").read_text(encoding="utf-8")
 
         self.assertIn("app_open_confirmation_requested", source)
         self.assertIn("app_open_confirmed", source)

@@ -9,7 +9,7 @@ import queue
 from app.utils.logger import logger
 from app.core.event_bus import event_bus
 from app.core.config_manager import config_manager
-from ui.message_formatting import normalize_chat_text, normalize_stream_chunk, should_auto_scroll
+from ui.pet.message_formatting import normalize_chat_text, normalize_stream_chunk, should_auto_scroll
 
 
 class ChatBubble(QWidget):

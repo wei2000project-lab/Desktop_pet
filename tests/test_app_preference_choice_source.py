@@ -4,7 +4,7 @@ import unittest
 
 class AppPreferenceChoiceSourceTests(unittest.TestCase):
     def test_preference_choice_ui_subscribes_and_publishes_choice_events(self):
-        source = pathlib.Path("ui/app_preference_choice.py").read_text(encoding="utf-8")
+        source = pathlib.Path("ui/pet/dialogs/app_preference_choice.py").read_text(encoding="utf-8")
 
         self.assertIn("app_preference_choice_requested", source)
         self.assertIn("app_preference_chosen", source)

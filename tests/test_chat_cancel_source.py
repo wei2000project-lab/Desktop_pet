@@ -1,12 +1,12 @@
 import pathlib
 import unittest
 
-from ui.bubble import ChatBubble
+from ui.pet.bubble import ChatBubble
 
 
 class ChatCancelSourceTests(unittest.TestCase):
     def test_bubble_send_button_switches_to_stop_during_ai_response(self):
-        source = pathlib.Path("ui/bubble.py").read_text(encoding="utf-8")
+        source = pathlib.Path("ui/pet/bubble.py").read_text(encoding="utf-8")
 
         self.assertIn('self.send_btn = QPushButton("送出"', source)
         self.assertIn('self.send_btn.setText("停止")', source)
@@ -23,7 +23,7 @@ class ChatCancelSourceTests(unittest.TestCase):
         self.assertIn('"ai_message_cancelled"', source)
 
     def test_scheduled_notifications_do_not_change_active_ai_state(self):
-        source = pathlib.Path("ui/bubble.py").read_text(encoding="utf-8")
+        source = pathlib.Path("ui/pet/bubble.py").read_text(encoding="utf-8")
 
         self.assertIn('"chat_system_notification"', source)
         self.assertIn("pending_system_notifications", source)
