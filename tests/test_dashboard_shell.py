@@ -8,7 +8,8 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 from PySide6.QtGui import QCloseEvent
 from PySide6.QtWidgets import QApplication, QMessageBox, QScrollArea
 
-from app.settings import SettingsSnapshot, SettingsValidationError
+from app.settings import ApiKeyEntry, SettingsService, SettingsSnapshot, SettingsValidationError
+from dataclasses import replace
 from ui.dashboard import DashboardWindow
 from ui.dashboard.page_registry import default_page_definitions
 from ui.dashboard.sidebar import DashboardSidebar
@@ -24,6 +25,9 @@ class FakeSettingsBackend:
         return self.snapshot
 
     def save(self, snapshot):
+        validator = SettingsService()
+        snapshot = validator.normalize(snapshot)
+        validator.validate(snapshot)
         self.saved.append(snapshot)
         self.snapshot = snapshot
         return snapshot
@@ -336,6 +340,109 @@ class DashboardShellTests(unittest.TestCase):
         self.assertEqual(self.settings.saved[0].reading_idle_seconds, 120)
         self.assertFalse(self.window.is_dirty)
 
+
+    def test_ai_loads_without_dirtying_settings(self):
+        page = self.window.ai_page
+        self.assertEqual(page.base_url_input.text(), self.settings.snapshot.base_url)
+        self.assertEqual(page.model_input.text(), self.settings.snapshot.model)
+        self.assertEqual(page.temperature_input.value(), 0.7)
+        self.assertEqual(page.max_memory_turns_input.value(), 6)
+        self.assertEqual(page.history_limit_input.value(), 20)
+        self.assertTrue(page.conversation_summary_check.isChecked())
+        self.assertFalse(self.window.is_dirty)
+
+    def test_ai_numeric_ranges(self):
+        page = self.window.ai_page
+        for control, low, high in (
+            (page.temperature_input, 0.0, 2.0),
+            (page.max_memory_turns_input, 0, 50),
+            (page.history_limit_input, 1, 100),
+        ):
+            control.setValue(-10)
+            self.assertEqual(control.value(), low)
+            control.setValue(1000)
+            self.assertEqual(control.value(), high)
+        self.assertAlmostEqual(page.temperature_input.singleStep(), 0.1)
+
+    def test_ai_and_other_pages_save_together_preserving_keys(self):
+        snapshot = replace(self.settings.snapshot,
+                           api_keys=(ApiKeyEntry("test", "fake-test-key"),),
+                           verify_ssl=False, custom_personality="保留人格")
+        self.window._original_snapshot = snapshot
+        self.window._draft_snapshot = snapshot
+        page = self.window.ai_page
+        page.base_url_input.setText(" https://example.test/v1 ")
+        page.model_input.setText(" test-model ")
+        page.temperature_input.setValue(1.2)
+        page.max_memory_turns_input.setValue(10)
+        page.history_limit_input.setValue(30)
+        page.conversation_summary_check.setChecked(False)
+        self.window.select_page("appearance")
+        self.window.appearance_page.width_input.setValue(400)
+        self.window.behavior_page.reading_idle_seconds_input.setValue(120)
+        self.window.general_page.always_on_top_check.setChecked(True)
+        self.window.select_page("ai")
+        self.assertEqual(page.model_input.text(), " test-model ")
+        self.assertEqual(self.settings.saved, [])
+        self.assertTrue(self.window.apply_changes())
+        saved = self.settings.saved[0]
+        self.assertEqual(saved.base_url, "https://example.test/v1")
+        self.assertEqual(saved.model, "test-model")
+        self.assertEqual(saved.temperature, 1.2)
+        self.assertEqual(saved.max_memory_turns, 10)
+        self.assertEqual(saved.history_limit, 30)
+        self.assertFalse(saved.conversation_summary_enabled)
+        self.assertEqual(saved.width, 400)
+        self.assertEqual(saved.reading_idle_seconds, 120)
+        self.assertTrue(saved.always_on_top)
+        self.assertEqual(saved.api_keys, snapshot.api_keys)
+        self.assertEqual(saved.verify_ssl, snapshot.verify_ssl)
+        self.assertEqual(saved.custom_personality, snapshot.custom_personality)
+        self.assertEqual(page.model_input.text(), "test-model")
+        self.assertFalse(self.window.is_dirty)
+
+    def test_ai_invalid_text_preserves_draft(self):
+        for field, value in (("base_url_input", "bad-url"),
+                             ("base_url_input", ""), ("model_input", "   ")):
+            with self.subTest(field=field, value=value):
+                self.window._restore_original()
+                getattr(self.window.ai_page, field).setText(value)
+                with patch("ui.dashboard.dashboard_window.QMessageBox.warning") as warning:
+                    self.assertFalse(self.window.apply_changes())
+                    warning.assert_called_once()
+                self.assertTrue(self.window.is_dirty)
+                self.assertEqual(getattr(self.window.ai_page, field).text(), value)
+                self.assertEqual(self.settings.saved, [])
+
+    def test_cancel_restores_ai_fields(self):
+        page = self.window.ai_page
+        page.model_input.setText("changed")
+        page.temperature_input.setValue(1.5)
+        page.conversation_summary_check.setChecked(False)
+        self.window.cancel_changes()
+        self.assertEqual(page.model_input.text(), self.settings.snapshot.model)
+        self.assertEqual(page.temperature_input.value(), 0.7)
+        self.assertTrue(page.conversation_summary_check.isChecked())
+        self.assertFalse(self.window.is_dirty)
+        self.assertEqual(self.settings.saved, [])
+
+    def test_reverting_ai_field_clears_dirty_state(self):
+        page = self.window.ai_page
+        page.model_input.setText("changed")
+        page.model_input.setText(self.settings.snapshot.model)
+        self.assertFalse(self.window.apply_button.isEnabled())
+
+    def test_close_save_with_invalid_ai_keeps_window_open(self):
+        self.window.ai_page.model_input.setText("")
+        event = QCloseEvent()
+        with (
+            patch("ui.dashboard.dashboard_window.QMessageBox.question",
+                  return_value=QMessageBox.StandardButton.Save),
+            patch("ui.dashboard.dashboard_window.QMessageBox.warning"),
+        ):
+            self.window.closeEvent(event)
+        self.assertFalse(event.isAccepted())
+        self.assertTrue(self.window.is_dirty)
 
 if __name__ == "__main__":
     unittest.main()

@@ -15,7 +15,7 @@ from app.settings import SettingsValidationError, settings_service
 from app.utils.logger import logger
 
 from ui.dashboard.page_registry import PageDefinition, default_page_definitions
-from ui.dashboard.pages import AppearancePage, BehaviorPage, GeneralPage
+from ui.dashboard.pages import AIPage, AppearancePage, BehaviorPage, GeneralPage
 from ui.dashboard.sidebar import DashboardSidebar
 
 
@@ -72,6 +72,7 @@ class DashboardWindow(QMainWindow):
         self.general_page: GeneralPage | None = None
         self.appearance_page: AppearancePage | None = None
         self.behavior_page: BehaviorPage | None = None
+        self.ai_page: AIPage | None = None
         for definition in self.page_definitions:
             page = definition.factory()
             page.setObjectName(f"dashboardPage_{definition.key}")
@@ -89,6 +90,10 @@ class DashboardWindow(QMainWindow):
                 self.behavior_page = page
                 page.load_snapshot(self._draft_snapshot)
                 page.reading_idle_changed.connect(self._update_reading_idle)
+            elif definition.key == "ai" and isinstance(page, AIPage):
+                self.ai_page = page
+                page.load_snapshot(self._draft_snapshot)
+                page.settings_changed.connect(self._update_ai_settings)
         content_layout.addWidget(self.content_stack, 1)
 
         action_bar = QWidget()
@@ -154,7 +159,7 @@ class DashboardWindow(QMainWindow):
         self._update_dirty_state()
 
     def _load_pages(self, snapshot) -> None:
-        for page in (self.general_page, self.appearance_page, self.behavior_page):
+        for page in (self.general_page, self.appearance_page, self.behavior_page, self.ai_page):
             if page is not None:
                 page.load_snapshot(snapshot)
 
@@ -163,7 +168,7 @@ class DashboardWindow(QMainWindow):
         self._update_dirty_state()
 
     def apply_changes(self) -> bool:
-        for page in (self.appearance_page, self.behavior_page):
+        for page in (self.appearance_page, self.behavior_page, self.ai_page):
             if page is not None:
                 page.commit_pending_input()
         try:
@@ -182,6 +187,10 @@ class DashboardWindow(QMainWindow):
         self._update_dirty_state()
         self.change_status_label.setText("設定已儲存")
         return True
+
+    def _update_ai_settings(self, values: dict) -> None:
+        self._draft_snapshot = replace(self._draft_snapshot, **values)
+        self._update_dirty_state()
 
     def cancel_changes(self) -> None:
         self._restore_original()
@@ -331,7 +340,8 @@ class DashboardWindow(QMainWindow):
                 color: #3f3944;
                 spacing: 8px;
             }
-            #dashboardSettingsCard QSpinBox {
+            #dashboardSettingsCard QSpinBox, #dashboardSettingsCard QDoubleSpinBox,
+            #dashboardSettingsCard QLineEdit {
                 background-color: #ffffff;
                 color: #3f3944;
                 border: 1px solid #cfcad4;

@@ -3,6 +3,7 @@
 from .general_page import GeneralPage
 from .appearance_page import AppearancePage
 from .behavior_page import BehaviorPage
+from .ai_page import AIPage
 from .placeholder_page import PlaceholderPage
 
-__all__ = ["AppearancePage", "BehaviorPage", "GeneralPage", "PlaceholderPage"]
+__all__ = ["AIPage", "AppearancePage", "BehaviorPage", "GeneralPage", "PlaceholderPage"]
