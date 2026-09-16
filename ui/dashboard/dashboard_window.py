@@ -1,12 +1,27 @@
-from PySide6.QtWidgets import QHBoxLayout, QMainWindow, QStackedWidget, QWidget
+from dataclasses import replace
+
+from PySide6.QtWidgets import (
+    QHBoxLayout,
+    QLabel,
+    QMainWindow,
+    QMessageBox,
+    QPushButton,
+    QStackedWidget,
+    QVBoxLayout,
+    QWidget,
+)
+
+from app.settings import SettingsValidationError, settings_service
+from app.utils.logger import logger
 
 from ui.dashboard.page_registry import PageDefinition, default_page_definitions
+from ui.dashboard.pages import GeneralPage
 from ui.dashboard.sidebar import DashboardSidebar
 
 
 class DashboardWindow(QMainWindow):
     DEFAULT_WIDTH = 900
-    DEFAULT_HEIGHT = 850
+    DEFAULT_HEIGHT = 760
     MINIMUM_WIDTH = 650
     MINIMUM_HEIGHT = 600
     AUTO_COLLAPSE_WIDTH = 800
@@ -15,6 +30,7 @@ class DashboardWindow(QMainWindow):
         self,
         parent=None,
         page_definitions: tuple[PageDefinition, ...] | None = None,
+        settings_backend=None,
     ):
         super().__init__(parent)
         self.setObjectName("dashboardWindow")
@@ -23,6 +39,10 @@ class DashboardWindow(QMainWindow):
         self.resize(self.DEFAULT_WIDTH, self.DEFAULT_HEIGHT)
 
         self.page_definitions = page_definitions or default_page_definitions()
+        self.settings_backend = settings_service if settings_backend is None else settings_backend
+        self._original_snapshot = self.settings_backend.load()
+        self._draft_snapshot = self._original_snapshot
+        self._allow_close = False
         self._page_indexes = {
             definition.key: index
             for index, definition in enumerate(self.page_definitions)
@@ -41,17 +61,53 @@ class DashboardWindow(QMainWindow):
         self.sidebar.collapsed_changed.connect(self._remember_sidebar_choice)
         layout.addWidget(self.sidebar)
 
+        content_container = QWidget()
+        content_container.setObjectName("dashboardContentContainer")
+        content_layout = QVBoxLayout(content_container)
+        content_layout.setContentsMargins(0, 0, 0, 0)
+        content_layout.setSpacing(0)
+
         self.content_stack = QStackedWidget()
         self.content_stack.setObjectName("dashboardContentStack")
+        self.general_page: GeneralPage | None = None
         for definition in self.page_definitions:
             page = definition.factory()
             page.setObjectName(f"dashboardPage_{definition.key}")
             self.content_stack.addWidget(page)
-        layout.addWidget(self.content_stack, 1)
+            if definition.key == "general" and isinstance(page, GeneralPage):
+                self.general_page = page
+                page.load_snapshot(self._draft_snapshot)
+                page.settings_changed.connect(self._update_always_on_top)
+                page.clear_history_requested.connect(self._confirm_clear_history)
+        content_layout.addWidget(self.content_stack, 1)
+
+        action_bar = QWidget()
+        action_bar.setObjectName("dashboardActionBar")
+        action_layout = QHBoxLayout(action_bar)
+        action_layout.setContentsMargins(24, 12, 24, 12)
+        action_layout.setSpacing(10)
+
+        self.change_status_label = QLabel("沒有未儲存的變更")
+        self.change_status_label.setObjectName("dashboardChangeStatus")
+        action_layout.addWidget(self.change_status_label, 1)
+
+        self.cancel_button = QPushButton("取消")
+        self.cancel_button.setObjectName("dashboardCancelButton")
+        self.cancel_button.clicked.connect(self.cancel_changes)
+        action_layout.addWidget(self.cancel_button)
+
+        self.apply_button = QPushButton("套用")
+        self.apply_button.setObjectName("dashboardApplyButton")
+        self.apply_button.clicked.connect(self.apply_changes)
+        action_layout.addWidget(self.apply_button)
+        content_layout.addWidget(action_bar)
+
+        layout.addWidget(content_container, 1)
         self.setCentralWidget(central)
 
         if self.page_definitions:
             self.select_page(self.page_definitions[0].key)
+        self._update_dirty_state()
         self._apply_styles()
 
     @property
@@ -70,6 +126,97 @@ class DashboardWindow(QMainWindow):
     def _remember_sidebar_choice(self, collapsed: bool) -> None:
         self._manual_collapsed = collapsed
 
+    @property
+    def is_dirty(self) -> bool:
+        return self._draft_snapshot != self._original_snapshot
+
+    def _update_always_on_top(self, enabled: bool) -> None:
+        self._draft_snapshot = replace(self._draft_snapshot, always_on_top=enabled)
+        self._update_dirty_state()
+
+    def _update_dirty_state(self) -> None:
+        dirty = self.is_dirty
+        self.apply_button.setEnabled(dirty)
+        self.change_status_label.setText("有未儲存的變更" if dirty else "沒有未儲存的變更")
+
+    def apply_changes(self) -> bool:
+        try:
+            saved = self.settings_backend.save(self._draft_snapshot)
+        except SettingsValidationError as exc:
+            QMessageBox.warning(self, "設定內容無效", str(exc))
+            return False
+        except Exception:
+            logger.error("Failed to save dashboard settings", exc_info=True)
+            QMessageBox.warning(self, "儲存失敗", "設定未完整儲存，請稍後再試。")
+            return False
+
+        self._original_snapshot = saved
+        self._draft_snapshot = saved
+        if self.general_page is not None:
+            self.general_page.load_snapshot(saved)
+        self._update_dirty_state()
+        self.change_status_label.setText("設定已儲存")
+        return True
+
+    def cancel_changes(self) -> None:
+        self._restore_original()
+        self._allow_close = True
+        self.close()
+
+    def _restore_original(self) -> None:
+        self._draft_snapshot = self._original_snapshot
+        if self.general_page is not None:
+            self.general_page.load_snapshot(self._original_snapshot)
+        self._update_dirty_state()
+
+    def _confirm_clear_history(self) -> None:
+        result = QMessageBox.question(
+            self,
+            "確認刪除對話紀錄",
+            "確定要刪除所有對話紀錄嗎？這個動作無法復原。",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if result != QMessageBox.StandardButton.Yes:
+            return
+
+        try:
+            self.settings_backend.clear_history()
+        except Exception:
+            logger.error("Failed to clear conversation history", exc_info=True)
+            QMessageBox.warning(self, "刪除失敗", "無法刪除對話紀錄，請稍後再試。")
+            return
+        QMessageBox.information(self, "已刪除", "對話紀錄已清空。")
+
+    def closeEvent(self, event) -> None:
+        if self._allow_close or not self.is_dirty:
+            event.accept()
+            return
+
+        result = QMessageBox.question(
+            self,
+            "尚有未儲存的變更",
+            "要在關閉前儲存變更嗎？",
+            QMessageBox.StandardButton.Save
+            | QMessageBox.StandardButton.Discard
+            | QMessageBox.StandardButton.Cancel,
+            QMessageBox.StandardButton.Save,
+        )
+        if result == QMessageBox.StandardButton.Save:
+            if self.apply_changes():
+                event.accept()
+            else:
+                event.ignore()
+        elif result == QMessageBox.StandardButton.Discard:
+            self._restore_original()
+            event.accept()
+        else:
+            event.ignore()
+
+    def showEvent(self, event) -> None:
+        self._allow_close = False
+        super().showEvent(event)
+
     def resizeEvent(self, event) -> None:
         super().resizeEvent(event)
         is_narrow = event.size().width() < self.AUTO_COLLAPSE_WIDTH
@@ -83,7 +230,8 @@ class DashboardWindow(QMainWindow):
     def _apply_styles(self) -> None:
         self.setStyleSheet(
             """
-            QMainWindow, #dashboardCentralWidget, #dashboardContentStack,
+            QMainWindow, #dashboardCentralWidget, #dashboardContentContainer,
+            #dashboardContentStack,
             #dashboardPageContent {
                 background-color: #ffffff;
                 color: #24212a;
@@ -144,6 +292,60 @@ class DashboardWindow(QMainWindow):
                 border-radius: 10px;
                 color: #6d6673;
                 padding: 18px;
+            }
+            #dashboardSettingsCard {
+                background-color: #faf9fb;
+                border: 1px solid #e2dfe6;
+                border-radius: 10px;
+            }
+            #dashboardSectionTitle {
+                color: #2e2932;
+                font-size: 16px;
+                font-weight: 600;
+            }
+            #dashboardSettingsCard QCheckBox {
+                color: #3f3944;
+                spacing: 8px;
+            }
+            #dashboardActionBar {
+                background-color: #f8f7f9;
+                border-top: 1px solid #dedbe3;
+            }
+            #dashboardChangeStatus {
+                color: #716a77;
+            }
+            #dashboardActionBar QPushButton {
+                min-width: 78px;
+                min-height: 34px;
+                border-radius: 7px;
+                padding: 0 12px;
+            }
+            #dashboardCancelButton {
+                background-color: #ffffff;
+                border: 1px solid #cfcad4;
+                color: #49424e;
+            }
+            #dashboardApplyButton {
+                background-color: #704294;
+                border: 1px solid #704294;
+                color: #ffffff;
+            }
+            #dashboardApplyButton:disabled {
+                background-color: #d7d2db;
+                border-color: #d7d2db;
+                color: #8e8793;
+            }
+            #dashboardDangerButton {
+                background-color: #ffffff;
+                border: 1px solid #b3261e;
+                border-radius: 7px;
+                color: #b3261e;
+                min-height: 34px;
+                padding: 0 12px;
+            }
+            #dashboardDangerButton:hover,
+            #dashboardDangerButton:focus {
+                background-color: #fff1f0;
             }
             """
         )
