@@ -15,7 +15,7 @@ from app.settings import SettingsValidationError, settings_service
 from app.utils.logger import logger
 
 from ui.dashboard.page_registry import PageDefinition, default_page_definitions
-from ui.dashboard.pages import AIPage, AppearancePage, BehaviorPage, GeneralPage
+from ui.dashboard.pages import AIPage, AppearancePage, BehaviorPage, GeneralPage, PersonalityPage
 from ui.dashboard.sidebar import DashboardSidebar
 from ui.dashboard.connection_test_controller import ConnectionTestController
 
@@ -74,6 +74,7 @@ class DashboardWindow(QMainWindow):
         self.appearance_page: AppearancePage | None = None
         self.behavior_page: BehaviorPage | None = None
         self.ai_page: AIPage | None = None
+        self.personality_page: PersonalityPage | None = None
         for definition in self.page_definitions:
             page = definition.factory()
             page.setObjectName(f"dashboardPage_{definition.key}")
@@ -95,6 +96,10 @@ class DashboardWindow(QMainWindow):
                 self.ai_page = page
                 page.load_snapshot(self._draft_snapshot)
                 page.settings_changed.connect(self._update_ai_settings)
+            elif definition.key == "personality" and isinstance(page, PersonalityPage):
+                self.personality_page = page
+                page.load_snapshot(self._draft_snapshot)
+                page.settings_changed.connect(self._update_personality)
         content_layout.addWidget(self.content_stack, 1)
         self.connection_tests = ConnectionTestController(self)
         if self.ai_page is not None:
@@ -163,7 +168,8 @@ class DashboardWindow(QMainWindow):
         self._update_dirty_state()
 
     def _load_pages(self, snapshot) -> None:
-        for page in (self.general_page, self.appearance_page, self.behavior_page, self.ai_page):
+        for page in (self.general_page, self.appearance_page, self.behavior_page,
+                     self.ai_page, self.personality_page):
             if page is not None:
                 page.load_snapshot(snapshot)
 
@@ -194,6 +200,11 @@ class DashboardWindow(QMainWindow):
 
     def _update_ai_settings(self, values: dict) -> None:
         self._draft_snapshot = replace(self._draft_snapshot, **values)
+        self._update_dirty_state()
+
+    def _update_personality(self, selected: str, custom: str) -> None:
+        self._draft_snapshot = replace(self._draft_snapshot,
+                                       selected_personality=selected, custom_personality=custom)
         self._update_dirty_state()
 
     def cancel_changes(self) -> None:
@@ -345,7 +356,8 @@ class DashboardWindow(QMainWindow):
                 font-size: 16px;
                 font-weight: 600;
             }
-            #dashboardSettingsCard QLabel, #dashboardSettingsCard QCheckBox {
+            #dashboardSettingsCard QLabel, #dashboardSettingsCard QCheckBox,
+            #dashboardSettingsCard QRadioButton {
                 color: #3f3944;
                 spacing: 8px;
             }
@@ -365,6 +377,17 @@ class DashboardWindow(QMainWindow):
                 color: #514b59;
                 font-size: 18px;
                 padding: 0;
+            }
+            #dashboardSettingsCard QPlainTextEdit {
+                background-color: #ffffff;
+                color: #3f3944;
+                border: 1px solid #cfcad4;
+                border-radius: 6px;
+                padding: 8px;
+            }
+            #dashboardSettingsCard QPlainTextEdit:disabled {
+                background-color: #f0edf3;
+                color: #827a89;
             }
             QPushButton#dashboardNumberStepButton:hover {
                 background-color: #ece8f2;
