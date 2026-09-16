@@ -1,14 +1,17 @@
-import os
+from pathlib import Path
 from typing import List
+
+from app.core.paths import PET_ANIMATIONS_DIR
 
 
 class LookAroundAnimation:
-    def __init__(self, base_dir: str):
+    def __init__(self, animations_dir: Path = PET_ANIMATIONS_DIR):
         self.name = "look_around"
         self.frame_rate_ms = 250
-        front = self._frame(base_dir, "front")
-        left = self._frame(base_dir, "left")
-        right = self._frame(base_dir, "right")
+        animations_dir = Path(animations_dir)
+        front = self._frame(animations_dir, "front")
+        left = self._frame(animations_dir, "left")
+        right = self._frame(animations_dir, "right")
         self.frames: List[str] = [
             front,
             left,
@@ -24,11 +27,5 @@ class LookAroundAnimation:
         ]
 
     @staticmethod
-    def _frame(base_dir: str, direction: str) -> str:
-        return os.path.join(
-            base_dir,
-            "assets",
-            "animations",
-            "look_around",
-            f"Nova_looking_{direction}.png",
-        )
+    def _frame(animations_dir: Path, direction: str) -> str:
+        return str(animations_dir / "look_around" / f"Nova_looking_{direction}.png")

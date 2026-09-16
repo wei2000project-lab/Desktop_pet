@@ -6,7 +6,7 @@ from app.animation.reading import ReadingAnimation
 
 class ReadingAnimationTests(unittest.TestCase):
     def test_reading_blink_and_page_turn_sequences(self):
-        animation = ReadingAnimation("root")
+        animation = ReadingAnimation()
 
         self.assertEqual(
             [pathlib.Path(path).name for path in animation.blink_frames],
@@ -18,7 +18,7 @@ class ReadingAnimationTests(unittest.TestCase):
         )
 
     def test_next_sequence_uses_seven_to_three_ratio_boundary(self):
-        animation = ReadingAnimation("root")
+        animation = ReadingAnimation()
 
         self.assertEqual(animation.next_sequence(lambda: 0.69), animation.blink_frames)
         self.assertEqual(animation.next_sequence(lambda: 0.7), animation.page_turn_frames)

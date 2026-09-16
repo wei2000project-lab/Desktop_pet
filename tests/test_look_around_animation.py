@@ -5,12 +5,11 @@ from unittest.mock import Mock, patch
 
 from app.animation.animator import Animator
 from app.animation.look_around import LookAroundAnimation
-from app.core.paths import PROJECT_ROOT
 
 
 class LookAroundAnimationTests(unittest.TestCase):
     def test_sequence_holds_directions_for_one_second(self):
-        animation = LookAroundAnimation(str(PROJECT_ROOT))
+        animation = LookAroundAnimation()
 
         self.assertEqual(
             [pathlib.Path(path).name for path in animation.frames],
@@ -53,7 +52,7 @@ class LookAroundAnimationTests(unittest.TestCase):
 
     def test_play_animation_starts_look_around_frames(self):
         animator = Animator.__new__(Animator)
-        animator.look_around_anim = LookAroundAnimation(str(PROJECT_ROOT))
+        animator.look_around_anim = LookAroundAnimation()
         animator.animation_timer = Mock()
 
         animator.play_animation("look_around")

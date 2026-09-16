@@ -7,7 +7,6 @@ from app.animation.animator import Animator
 from app.control.execution.request_handler import AppOpenRequestHandler
 from app.utils.logger import logger
 from app.core.event_bus import event_bus
-from app.core.paths import PROJECT_ROOT
 from app.core.user_message_router import UserMessageRouter
 from app.core.window_manager import WindowManager
 from ui.app_open_confirmation import AppOpenConfirmation
@@ -23,7 +22,7 @@ class NovaApplication:
         self.app.setQuitOnLastWindowClosed(False)
 
         self.window_manager = WindowManager()
-        self.animator = Animator(str(PROJECT_ROOT))
+        self.animator = Animator()
         self.user_message_router = UserMessageRouter(event_bus)
         self.conversation_manager = ConversationManager()
         self.app_open_handler = AppOpenRequestHandler(event_bus)

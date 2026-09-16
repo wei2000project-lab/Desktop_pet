@@ -6,6 +6,7 @@ from PySide6.QtCore import QObject, QTimer, Slot
 from app.utils.logger import logger
 from app.core.event_bus import event_bus
 from app.core.config_manager import config_manager
+from app.core.paths import PET_EMOTIONS_DIR
 from app.animation.blink import BlinkAnimation
 from app.animation.look_around import LookAroundAnimation
 from app.animation.reading import ReadingAnimation
@@ -17,15 +18,14 @@ class Animator(QObject):
     READING_ACTION_MIN_MS = 1500
     READING_ACTION_MAX_MS = 5000
 
-    def __init__(self, base_dir: str):
+    def __init__(self):
         super().__init__()
-        self.base_dir = base_dir
-        self.idle_image_path = os.path.join(base_dir, "assets", "emotions", "Nova_idle.png")
+        self.idle_image_path = str(PET_EMOTIONS_DIR / "Nova_idle.png")
         
         # Load blink animation
-        self.blink_anim = BlinkAnimation(base_dir)
-        self.look_around_anim = LookAroundAnimation(base_dir)
-        self.reading_anim = ReadingAnimation(base_dir)
+        self.blink_anim = BlinkAnimation()
+        self.look_around_anim = LookAroundAnimation()
+        self.reading_anim = ReadingAnimation()
 
         self.current_state = "idle"
         self.active_frames: List[str] = []

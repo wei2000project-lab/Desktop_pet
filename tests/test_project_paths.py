@@ -7,6 +7,9 @@ from app.core.paths import (
     CONFIG_DIR,
     DATA_DIR,
     LOGS_DIR,
+    PET_ANIMATIONS_DIR,
+    PET_ASSETS_DIR,
+    PET_EMOTIONS_DIR,
     PROJECT_ROOT,
     RUNTIME_DIR,
 )
@@ -20,6 +23,9 @@ class ProjectPathsTests(unittest.TestCase):
 
     def test_static_and_runtime_directories_stay_under_project_root(self):
         self.assertEqual(ASSETS_DIR, PROJECT_ROOT / "assets")
+        self.assertEqual(PET_ASSETS_DIR, ASSETS_DIR / "pet")
+        self.assertEqual(PET_ANIMATIONS_DIR, PET_ASSETS_DIR / "animations")
+        self.assertEqual(PET_EMOTIONS_DIR, PET_ASSETS_DIR / "emotions")
         self.assertEqual(LOGS_DIR, PROJECT_ROOT / "logs")
         self.assertEqual(DATA_DIR, PROJECT_ROOT / "data")
         self.assertEqual(CONFIG_DIR, DATA_DIR / "config")

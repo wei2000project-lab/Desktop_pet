@@ -5,6 +5,9 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 ASSETS_DIR = PROJECT_ROOT / "assets"
+PET_ASSETS_DIR = ASSETS_DIR / "pet"
+PET_ANIMATIONS_DIR = PET_ASSETS_DIR / "animations"
+PET_EMOTIONS_DIR = PET_ASSETS_DIR / "emotions"
 LOGS_DIR = PROJECT_ROOT / "logs"
 
 DATA_DIR = PROJECT_ROOT / "data"
