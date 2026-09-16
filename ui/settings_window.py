@@ -1,14 +1,45 @@
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QObject, QRunnable, QThreadPool, Qt, Signal, Slot
 from PySide6.QtGui import QIntValidator
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QTabWidget,
     QLabel, QLineEdit, QCheckBox, QPushButton, QFormLayout, QSlider,
     QPlainTextEdit, QMessageBox, QButtonGroup
 )
-from app.core.config_manager import config_manager
-from app.core.event_bus import event_bus
-from app.utils.logger import logger
 from app.ai.prompt_builder import get_personality_option_labels
+from app.settings import ApiKeyEntry, SettingsSnapshot, SettingsValidationError, settings_service
+from app.utils.logger import logger
+
+
+class ApiConnectionTestSignals(QObject):
+    finished = Signal(bool, str)
+
+
+class ApiConnectionTestWorker(QRunnable):
+    def __init__(self, base_url: str, api_key: str, model: str, verify_ssl: bool):
+        super().__init__()
+        self.base_url = base_url
+        self.api_key = api_key
+        self.model = model
+        self.verify_ssl = verify_ssl
+        self.signals = ApiConnectionTestSignals()
+
+    @Slot()
+    def run(self):
+        try:
+            from app.ai.client import AIClient
+
+            client = AIClient(
+                base_url=self.base_url,
+                api_key=self.api_key,
+                model=self.model,
+                verify_ssl=self.verify_ssl,
+                timeout=15.0,
+            )
+            client.test_connection()
+        except Exception as exc:
+            self.signals.finished.emit(False, str(exc) or type(exc).__name__)
+            return
+        self.signals.finished.emit(True, "")
 
 class NumberInputWithButtons(QWidget):
     """Custom widget containing a minus button, a centered QLineEdit, and a plus button."""
@@ -129,6 +160,9 @@ class NumberInputWithButtons(QWidget):
 class SettingsWindow(QWidget):
     def __init__(self):
         super().__init__()
+        self._settings_snapshot = SettingsSnapshot()
+        self._api_test_workers = set()
+        self._api_test_session = 0
         self.setWindowTitle("Nova 設定 (Settings)")
         self.resize(380, 520)
         self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
@@ -436,7 +470,7 @@ class SettingsWindow(QWidget):
         self.api_keys_layout.addLayout(row_layout)
         self.api_key_rows.append(row)
 
-    def remove_api_key_row(self, row):
+    def remove_api_key_row(self, row, ensure_one: bool = True):
         if row not in self.api_key_rows:
             return
         self.api_key_rows.remove(row)
@@ -447,7 +481,7 @@ class SettingsWindow(QWidget):
             if widget:
                 widget.deleteLater()
         self.api_keys_layout.removeItem(layout)
-        if not self.api_key_rows:
+        if ensure_one and not self.api_key_rows:
             self.add_api_key_row()
 
     def collect_api_key_entries(self):
@@ -456,8 +490,8 @@ class SettingsWindow(QWidget):
             name = row["name_input"].text().strip()
             key = row["key_input"].text().strip()
             if key:
-                entries.append({"name": name or f"Key {len(entries) + 1}", "key": key})
-        return entries
+                entries.append(ApiKeyEntry(name or f"Key {len(entries) + 1}", key))
+        return tuple(entries)
 
     def test_api_key_row(self, row):
         key = row["key_input"].text().strip()
@@ -465,94 +499,77 @@ class SettingsWindow(QWidget):
             QMessageBox.warning(self, "測試連線", "請先輸入 API Key。")
             return
 
-        try:
-            from app.ai.client import AIClient
-
-            client = AIClient(
-                base_url=self.base_url_input.text().strip() or "https://api.openai.com/v1",
-                api_key=key,
-                model=self.model_input.text().strip() or "gpt-4o-mini",
-                verify_ssl=config_manager.get_api("VerifySSL", "true").lower() == "true",
-                timeout=15.0,
-            )
-            client.test_connection()
-        except Exception as exc:
-            QMessageBox.warning(self, "測試連線失敗", str(exc))
+        test_btn = row["test_btn"]
+        if not test_btn.isEnabled():
             return
+        test_btn.setEnabled(False)
+        test_btn.setText("測試中")
 
-        QMessageBox.information(self, "測試連線成功", "此 API Key 可以成功連線。")
+        worker = ApiConnectionTestWorker(
+            base_url=self.base_url_input.text().strip() or "https://api.openai.com/v1",
+            api_key=key,
+            model=self.model_input.text().strip() or "gpt-4o-mini",
+            verify_ssl=self._settings_snapshot.verify_ssl,
+        )
+        session = self._api_test_session
+        worker.signals.finished.connect(
+            lambda success, message, item=row, task=worker, token=session:
+                self.on_api_test_finished(item, task, token, success, message)
+        )
+        self._api_test_workers.add(worker)
+        QThreadPool.globalInstance().start(worker)
+
+    def on_api_test_finished(self, row, worker, session, success, message):
+        self._api_test_workers.discard(worker)
+        if row not in self.api_key_rows:
+            return
+        row["test_btn"].setEnabled(True)
+        row["test_btn"].setText("測試")
+        if session != self._api_test_session:
+            return
+        if success:
+            QMessageBox.information(self, "測試連線成功", "此 API Key 可以成功連線。")
+        else:
+            QMessageBox.warning(self, "測試連線失敗", message)
+
+    def closeEvent(self, event):
+        self._api_test_session += 1
+        super().closeEvent(event)
 
     def on_temp_slider_changed(self, value: int):
         self.temp_val_label.setText(f"{value / 10.0:.1f}")
 
     def load_settings(self):
-        # AI settings
+        snapshot = settings_service.load()
+        self._settings_snapshot = snapshot
+
         for row in list(self.api_key_rows):
-            self.remove_api_key_row(row)
-        for entry in config_manager.get_api_key_entries():
-            self.add_api_key_row(entry.get("name", ""), entry.get("key", ""))
+            self.remove_api_key_row(row, ensure_one=False)
+        for entry in snapshot.api_keys:
+            self.add_api_key_row(entry.name, entry.key)
         if not self.api_key_rows:
             self.add_api_key_row()
-        self.base_url_input.setText(config_manager.get_api("BaseUrl", "https://api.openai.com/v1"))
-        self.model_input.setText(config_manager.get_api("Model", "gpt-4o-mini"))
-        
-        try:
-            temp = float(config_manager.get_api("Temperature", "0.7"))
-        except ValueError:
-            temp = 0.7
-            
-        self.temp_slider.setValue(int(temp * 10))
-        self.temp_val_label.setText(f"{temp:.1f}")
-        self.max_memory_turns_input.setValue(config_manager.get_general_int("MaxMemoryTurns", 6))
-        self.history_limit_input.setValue(config_manager.get_general_int("HistoryLimit", 20))
-        self.conversation_summary_check.setChecked(
-            config_manager.get_general_bool("ConversationSummaryEnabled", True)
-        )
+        self.base_url_input.setText(snapshot.base_url)
+        self.model_input.setText(snapshot.model)
+        self.temp_slider.setValue(int(snapshot.temperature * 10))
+        self.temp_val_label.setText(f"{snapshot.temperature:.1f}")
+        self.max_memory_turns_input.setValue(snapshot.max_memory_turns)
+        self.history_limit_input.setValue(snapshot.history_limit)
+        self.conversation_summary_check.setChecked(snapshot.conversation_summary_enabled)
 
-        prompt_data = config_manager.get_prompt()
-        selected_personality = prompt_data.get("selected_personality", "")
-        if not selected_personality:
-            legacy_options = prompt_data.get("personality_options", [])
-            legacy_map = {
-                "cute": "catgirl_companion",
-                "catgirl": "catgirl_companion",
-                "gentle": "warm_companion",
-                "concise": "concise_assistant",
-                "proactive": "energetic_partner",
-                "few_emoticons": "catgirl_companion",
-            }
-            if legacy_options:
-                selected_personality = legacy_map.get(legacy_options[0], "")
         for key, checkbox in self.personality_checks.items():
-            checkbox.setChecked(key == selected_personality)
-        self.custom_personality_check.setChecked(selected_personality == "custom")
-        self.custom_personality_input.setPlainText(prompt_data.get("custom_personality", ""))
+            checkbox.setChecked(key == snapshot.selected_personality)
+        self.custom_personality_check.setChecked(snapshot.selected_personality == "custom")
+        self.custom_personality_input.setPlainText(snapshot.custom_personality)
         self.custom_personality_input.setEnabled(self.custom_personality_check.isChecked())
 
-        # Pet settings
-        self.width_input.setValue(config_manager.get_general_int("Width", 250))
-        self.height_input.setValue(config_manager.get_general_int("Height", 250))
-        self.always_on_top_check.setChecked(config_manager.get_general_bool("AlwaysOnTop", True))
-        self.reading_idle_seconds_input.setValue(config_manager.get_general_int("ReadingIdleSeconds", 300))
+        self.width_input.setValue(snapshot.width)
+        self.height_input.setValue(snapshot.height)
+        self.always_on_top_check.setChecked(snapshot.always_on_top)
+        self.reading_idle_seconds_input.setValue(snapshot.reading_idle_seconds)
 
     def save_settings(self):
         logger.info("Saving settings window configuration...")
-        
-        # Temp values parsing
-        temp = self.temp_slider.value() / 10.0
-        width = self.width_input.getValue()
-        height = self.height_input.getValue()
-        max_memory_turns = self.max_memory_turns_input.getValue()
-        history_limit = self.history_limit_input.getValue()
-        reading_idle_seconds = self.reading_idle_seconds_input.getValue()
-
-        # Save AI settings
-        config_manager.set_api_key_entries(self.collect_api_key_entries())
-        config_manager.set_api("BaseUrl", self.base_url_input.text().strip())
-        config_manager.set_api("Model", self.model_input.text().strip())
-        config_manager.set_api("Temperature", f"{temp:.1f}")
-        
-        prompt_data = config_manager.get_prompt()
         selected_personality = ""
         for key, checkbox in self.personality_checks.items():
             if checkbox.isChecked():
@@ -561,27 +578,32 @@ class SettingsWindow(QWidget):
         if self.custom_personality_check.isChecked():
             selected_personality = "custom"
 
-        prompt_data["selected_personality"] = selected_personality
-        prompt_data.pop("personality_options", None)
-        prompt_data.pop("custom_personality_enabled", None)
-        prompt_data["custom_personality"] = self.custom_personality_input.toPlainText().strip()
-        config_manager.save_prompt(prompt_data)
-        
-        # Save Pet settings
-        config_manager.set_general("Width", width)
-        config_manager.set_general("Height", height)
-        config_manager.set_general("AlwaysOnTop", str(self.always_on_top_check.isChecked()).lower())
-        config_manager.set_general("MaxMemoryTurns", max_memory_turns)
-        config_manager.set_general("ConversationSummaryEnabled", str(self.conversation_summary_check.isChecked()).lower())
-        config_manager.set_general("HistoryLimit", history_limit)
-        config_manager.set_general("ReadingIdleSeconds", reading_idle_seconds)
-        
-        # Force config manager to reload inside memory
-        config_manager.load_configs()
+        snapshot = SettingsSnapshot(
+            api_keys=self.collect_api_key_entries(),
+            base_url=self.base_url_input.text(),
+            model=self.model_input.text(),
+            temperature=self.temp_slider.value() / 10.0,
+            verify_ssl=self._settings_snapshot.verify_ssl,
+            width=self.width_input.getValue(),
+            height=self.height_input.getValue(),
+            always_on_top=self.always_on_top_check.isChecked(),
+            max_memory_turns=self.max_memory_turns_input.getValue(),
+            history_limit=self.history_limit_input.getValue(),
+            conversation_summary_enabled=self.conversation_summary_check.isChecked(),
+            reading_idle_seconds=self.reading_idle_seconds_input.getValue(),
+            selected_personality=selected_personality,
+            custom_personality=self.custom_personality_input.toPlainText(),
+        )
+        try:
+            self._settings_snapshot = settings_service.save(snapshot)
+        except SettingsValidationError as exc:
+            QMessageBox.warning(self, "設定內容無效", str(exc))
+            return
+        except Exception:
+            logger.error("Failed to save settings", exc_info=True)
+            QMessageBox.warning(self, "儲存失敗", "設定未完整儲存，請稍後再試。")
+            return
 
-        # Publish config_updated event for live reloading
-        event_bus.publish("config_updated")
-        
         self.close()
 
     def confirm_clear_history(self):
@@ -596,6 +618,5 @@ class SettingsWindow(QWidget):
         if result != QMessageBox.StandardButton.Yes:
             return
 
-        config_manager.clear_history()
-        event_bus.publish("history_cleared")
+        settings_service.clear_history()
         QMessageBox.information(self, "已刪除", "對話紀錄已清空。")

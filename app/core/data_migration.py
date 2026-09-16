@@ -17,6 +17,7 @@ LEGACY_RUNTIME_FILES = {
     "app_preferences.json": "preferences.json",
     "history.json": "history.json",
     "memory.json": "memory.json",
+    "prompt.json": "prompt.json",
 }
 
 

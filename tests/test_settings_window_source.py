@@ -16,9 +16,9 @@ class SettingsWindowSourceTests(unittest.TestCase):
         self.assertIn("最大記憶輪數", source)
         self.assertIn("歷史紀錄上限", source)
         self.assertIn("啟用過去對話摘要", source)
-        self.assertIn("MaxMemoryTurns", source)
-        self.assertIn("HistoryLimit", source)
-        self.assertIn("ConversationSummaryEnabled", source)
+        self.assertIn("snapshot.max_memory_turns", source)
+        self.assertIn("snapshot.history_limit", source)
+        self.assertIn("snapshot.conversation_summary_enabled", source)
         self.assertNotIn("輸出文字最大數量", source)
         self.assertNotIn("max_chars_input", source)
         self.assertNotIn('set_api("MaxChars"', source)
@@ -29,7 +29,8 @@ class SettingsWindowSourceTests(unittest.TestCase):
         self.assertIn("api_key_rows", source)
         self.assertIn("add_api_key_row", source)
         self.assertIn("測試連線", source)
-        self.assertIn("set_api_key_entries", source)
+        self.assertIn("ApiConnectionTestWorker", source)
+        self.assertIn("QThreadPool.globalInstance().start(worker)", source)
 
     def test_api_key_rows_use_full_width_and_red_trash_delete_button(self):
         source = pathlib.Path("ui/settings_window.py").read_text(encoding="utf-8")
@@ -47,8 +48,30 @@ class SettingsWindowSourceTests(unittest.TestCase):
         source = pathlib.Path("ui/settings_window.py").read_text(encoding="utf-8")
 
         self.assertIn("reading_idle_seconds_input", source)
-        self.assertIn("ReadingIdleSeconds", source)
+        self.assertIn("snapshot.reading_idle_seconds", source)
         self.assertIn("進入閱讀狀態閒置秒數", source)
+
+    def test_settings_window_uses_service_instead_of_direct_config_writes(self):
+        source = pathlib.Path("ui/settings_window.py").read_text(encoding="utf-8")
+
+        self.assertIn("settings_service.load()", source)
+        self.assertIn("settings_service.save(snapshot)", source)
+        self.assertIn("settings_service.clear_history()", source)
+        self.assertNotIn("config_manager", source)
+        self.assertNotIn('event_bus.publish("config_updated")', source)
+
+    def test_api_connection_test_runs_in_background(self):
+        source = pathlib.Path("ui/settings_window.py").read_text(encoding="utf-8")
+
+        self.assertIn("class ApiConnectionTestWorker(QRunnable)", source)
+        self.assertIn("test_btn.setEnabled(False)", source)
+        self.assertIn("QThreadPool.globalInstance().start(worker)", source)
+        self.assertIn("session != self._api_test_session", source)
+
+    def test_reloading_settings_does_not_create_an_extra_blank_api_key_row(self):
+        source = pathlib.Path("ui/settings_window.py").read_text(encoding="utf-8")
+
+        self.assertIn("remove_api_key_row(row, ensure_one=False)", source)
 
 
 if __name__ == "__main__":

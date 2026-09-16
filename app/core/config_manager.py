@@ -1,6 +1,9 @@
 import os
+import copy
 import configparser
+import io
 import json
+import tempfile
 from pathlib import Path
 from typing import Any, Dict, List
 
@@ -17,6 +20,96 @@ def read_layered_ini(default_path: Path | str, runtime_path: Path | str) -> conf
     if existing_paths:
         parser.read(existing_paths, encoding="utf-8")
     return parser
+
+
+def read_layered_json(default_path: Path | str, runtime_path: Path | str) -> Dict[str, Any]:
+    """Merge a tracked JSON object with user-owned runtime overrides."""
+    merged: Dict[str, Any] = {}
+    for path in (Path(default_path), Path(runtime_path)):
+        merged.update(_read_json_object(path))
+    return merged
+
+
+def _read_json_object(path: Path | str) -> Dict[str, Any]:
+    path = Path(path)
+    if not path.exists():
+        return {}
+    with path.open("r", encoding="utf-8") as file:
+        value = json.load(file)
+    if not isinstance(value, dict):
+        raise ValueError(f"JSON settings must contain an object: {path}")
+    return value
+
+
+def write_text_bundle_atomically(contents: Dict[Path | str, str]) -> None:
+    """Replace multiple text files and restore earlier files if one replacement fails."""
+    normalized = {Path(path): text for path, text in contents.items()}
+    originals: Dict[Path, bytes | None] = {}
+    temporary_paths: Dict[Path, Path] = {}
+    replaced: List[Path] = []
+
+    try:
+        for path, text in normalized.items():
+            path.parent.mkdir(parents=True, exist_ok=True)
+            originals[path] = path.read_bytes() if path.exists() else None
+            with tempfile.NamedTemporaryFile(
+                mode="w",
+                encoding="utf-8",
+                newline="",
+                dir=path.parent,
+                prefix=f".{path.name}.",
+                suffix=".tmp",
+                delete=False,
+            ) as temporary_file:
+                temporary_file.write(text)
+                temporary_file.flush()
+                os.fsync(temporary_file.fileno())
+                temporary_paths[path] = Path(temporary_file.name)
+
+        for path, temporary_path in temporary_paths.items():
+            os.replace(temporary_path, path)
+            replaced.append(path)
+    except Exception:
+        for path in reversed(replaced):
+            original = originals[path]
+            try:
+                if original is None:
+                    path.unlink(missing_ok=True)
+                else:
+                    _replace_bytes_atomically(path, original)
+            except OSError:
+                logger.error("Failed to roll back settings file: %s", path, exc_info=True)
+        raise
+    finally:
+        for temporary_path in temporary_paths.values():
+            try:
+                temporary_path.unlink(missing_ok=True)
+            except OSError:
+                pass
+
+
+def _replace_bytes_atomically(path: Path, value: bytes) -> None:
+    with tempfile.NamedTemporaryFile(
+        mode="wb",
+        dir=path.parent,
+        prefix=f".{path.name}.",
+        suffix=".rollback.tmp",
+        delete=False,
+    ) as temporary_file:
+        temporary_file.write(value)
+        temporary_file.flush()
+        os.fsync(temporary_file.fileno())
+        temporary_path = Path(temporary_file.name)
+    try:
+        os.replace(temporary_path, path)
+    finally:
+        temporary_path.unlink(missing_ok=True)
+
+
+def _serialize_ini(parser: configparser.ConfigParser) -> str:
+    buffer = io.StringIO()
+    parser.write(buffer)
+    return buffer.getvalue()
 
 
 class ConfigManager:
@@ -38,7 +131,8 @@ class ConfigManager:
         self.default_config_ini_path = str(CONFIG_DIR / "app.defaults.ini")
         self.config_ini_path = str(RUNTIME_DIR / "app.ini")
         self.api_ini_path = str(RUNTIME_DIR / "api.ini")
-        self.prompt_json_path = str(CONFIG_DIR / "prompt.json")
+        self.default_prompt_json_path = str(CONFIG_DIR / "prompt.json")
+        self.prompt_json_path = str(RUNTIME_DIR / "prompt.json")
         self.history_json_path = str(RUNTIME_DIR / "history.json")
         self.memory_json_path = str(RUNTIME_DIR / "memory.json")
         self.env_path = str(PROJECT_ROOT / ".env")
@@ -145,11 +239,16 @@ class ConfigManager:
 
     def get_api_key_entries(self) -> List[Dict[str, str]]:
         raw_entries = ""
+        legacy_key = ""
         try:
             raw_entries = self.api_config.get("API", "ApiKeys")
         except (configparser.NoSectionError, configparser.NoOptionError):
             raw_entries = ""
-        return decode_api_key_entries(raw_entries, legacy_key=self.get_api("ApiKey", ""))
+        try:
+            legacy_key = self.api_config.get("API", "ApiKey")
+        except (configparser.NoSectionError, configparser.NoOptionError):
+            legacy_key = ""
+        return decode_api_key_entries(raw_entries, legacy_key=legacy_key)
 
     def set_api_key_entries(self, entries: List[Dict[str, str]]):
         if not self.api_config.has_section("API"):
@@ -173,23 +272,71 @@ class ConfigManager:
         except Exception as e:
             logger.error(f"Failed to save api.ini: {e}")
 
+    def save_settings_bundle(
+        self,
+        general_values: Dict[str, Any],
+        api_values: Dict[str, Any],
+        api_key_entries: List[Dict[str, str]],
+        prompt_values: Dict[str, Any],
+    ) -> None:
+        """Persist one complete settings edit, rolling back if any file fails."""
+        general_config = copy.deepcopy(self.general_config)
+        api_config = copy.deepcopy(self.api_config)
+        if not general_config.has_section("General"):
+            general_config.add_section("General")
+        if not api_config.has_section("API"):
+            api_config.add_section("API")
+
+        for key, value in general_values.items():
+            general_config.set("General", key, str(value))
+        for key, value in api_values.items():
+            api_config.set("API", key, str(value))
+        api_config.set("API", "ApiKeys", encode_api_key_entries(api_key_entries))
+        api_config.set("API", "ApiKey", first_api_key(api_key_entries))
+
+        runtime_prompt: Dict[str, Any] = {}
+        prompt_path = Path(self.prompt_json_path)
+        if prompt_path.exists():
+            with prompt_path.open("r", encoding="utf-8") as file:
+                runtime_prompt = json.load(file)
+            if not isinstance(runtime_prompt, dict):
+                raise ValueError("Runtime prompt settings must contain an object")
+        runtime_prompt.update(prompt_values)
+        runtime_prompt.pop("personality_options", None)
+        runtime_prompt.pop("custom_personality_enabled", None)
+
+        write_text_bundle_atomically(
+            {
+                Path(self.config_ini_path): _serialize_ini(general_config),
+                Path(self.api_ini_path): _serialize_ini(api_config),
+                prompt_path: json.dumps(runtime_prompt, ensure_ascii=False, indent=2) + "\n",
+            }
+        )
+        self.general_config = general_config
+        self.api_config = api_config
+
     # JSON Handlers (Prompt, History, Memory)
     def get_prompt(self) -> Dict[str, Any]:
-        if os.path.exists(self.prompt_json_path):
-            try:
-                with open(self.prompt_json_path, "r", encoding="utf-8") as f:
-                    return json.load(f)
-            except Exception as e:
-                logger.error(f"Failed to load prompt.json: {e}")
-        return {}
+        prompt_data: Dict[str, Any] = {}
+        try:
+            prompt_data.update(_read_json_object(self.default_prompt_json_path))
+        except Exception as e:
+            logger.error(f"Failed to load default prompt settings: {e}")
+        try:
+            prompt_data.update(_read_json_object(self.prompt_json_path))
+        except Exception as e:
+            logger.error(f"Failed to load runtime prompt settings: {e}")
+        return prompt_data
 
     def save_prompt(self, prompt_data: Dict[str, Any]):
         try:
-            os.makedirs(os.path.dirname(self.prompt_json_path), exist_ok=True)
-            with open(self.prompt_json_path, "w", encoding="utf-8") as f:
-                json.dump(prompt_data, f, ensure_ascii=False, indent=2)
+            write_text_bundle_atomically(
+                {
+                    Path(self.prompt_json_path): json.dumps(prompt_data, ensure_ascii=False, indent=2) + "\n",
+                }
+            )
         except Exception as e:
-            logger.error(f"Failed to save prompt.json: {e}")
+            logger.error(f"Failed to save runtime prompt settings: {e}")
 
     def get_history(self) -> List[Dict[str, Any]]:
         if os.path.exists(self.history_json_path):

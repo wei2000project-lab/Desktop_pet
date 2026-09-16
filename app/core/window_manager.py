@@ -57,6 +57,8 @@ class WindowManager:
             except Exception as e:
                 logger.error(f"Failed to create SettingsWindow: {e}", exc_info=True)
                 return
+        else:
+            self.settings_window.load_settings()
         self.settings_window.show()
         self.settings_window.raise_()
         self.settings_window.activateWindow()

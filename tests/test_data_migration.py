@@ -14,13 +14,13 @@ class DataMigrationTests(unittest.TestCase):
             legacy.mkdir()
             (legacy / "api.ini").write_text("[API]\nmodel=test\n", encoding="utf-8")
             (legacy / "config.ini").write_text("[General]\nwidth=300\n", encoding="utf-8")
-            for name in ("apps.json", "app_preferences.json", "history.json", "memory.json"):
+            for name in ("apps.json", "app_preferences.json", "history.json", "memory.json", "prompt.json"):
                 (legacy / name).write_text("{}", encoding="utf-8")
 
             result = migrate_legacy_runtime_data(legacy, runtime)
 
             self.assertEqual(result.failed, ())
-            self.assertEqual(len(result.migrated), 6)
+            self.assertEqual(len(result.migrated), 7)
             self.assertTrue((legacy / "api.ini").exists())
             self.assertEqual((runtime / "app.ini").read_text(encoding="utf-8"),
                              "[General]\nwidth=300\n")
