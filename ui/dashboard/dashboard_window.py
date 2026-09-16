@@ -15,7 +15,7 @@ from app.settings import SettingsValidationError, settings_service
 from app.utils.logger import logger
 
 from ui.dashboard.page_registry import PageDefinition, default_page_definitions
-from ui.dashboard.pages import AppearancePage, GeneralPage
+from ui.dashboard.pages import AppearancePage, BehaviorPage, GeneralPage
 from ui.dashboard.sidebar import DashboardSidebar
 
 
@@ -71,6 +71,7 @@ class DashboardWindow(QMainWindow):
         self.content_stack.setObjectName("dashboardContentStack")
         self.general_page: GeneralPage | None = None
         self.appearance_page: AppearancePage | None = None
+        self.behavior_page: BehaviorPage | None = None
         for definition in self.page_definitions:
             page = definition.factory()
             page.setObjectName(f"dashboardPage_{definition.key}")
@@ -84,6 +85,10 @@ class DashboardWindow(QMainWindow):
                 self.appearance_page = page
                 page.load_snapshot(self._draft_snapshot)
                 page.size_changed.connect(self._update_pet_size)
+            elif definition.key == "behavior" and isinstance(page, BehaviorPage):
+                self.behavior_page = page
+                page.load_snapshot(self._draft_snapshot)
+                page.reading_idle_changed.connect(self._update_reading_idle)
         content_layout.addWidget(self.content_stack, 1)
 
         action_bar = QWidget()
@@ -149,13 +154,18 @@ class DashboardWindow(QMainWindow):
         self._update_dirty_state()
 
     def _load_pages(self, snapshot) -> None:
-        for page in (self.general_page, self.appearance_page):
+        for page in (self.general_page, self.appearance_page, self.behavior_page):
             if page is not None:
                 page.load_snapshot(snapshot)
 
+    def _update_reading_idle(self, seconds: int) -> None:
+        self._draft_snapshot = replace(self._draft_snapshot, reading_idle_seconds=seconds)
+        self._update_dirty_state()
+
     def apply_changes(self) -> bool:
-        if self.appearance_page is not None:
-            self.appearance_page.commit_pending_input()
+        for page in (self.appearance_page, self.behavior_page):
+            if page is not None:
+                page.commit_pending_input()
         try:
             saved = self.settings_backend.save(self._draft_snapshot)
         except SettingsValidationError as exc:

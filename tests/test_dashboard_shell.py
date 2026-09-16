@@ -247,6 +247,95 @@ class DashboardShellTests(unittest.TestCase):
         self.assertFalse(self.window.general_page.always_on_top_check.isChecked())
         self.assertEqual(self.settings.saved, [])
 
+    def test_behavior_loads_without_dirtying_settings(self):
+        control = self.window.behavior_page.reading_idle_seconds_input
+        self.assertEqual(control.value(), self.settings.snapshot.reading_idle_seconds)
+        self.assertFalse(self.window.is_dirty)
+        self.assertEqual(self.settings.saved, [])
+
+    def test_behavior_enforces_range_and_step(self):
+        control = self.window.behavior_page.reading_idle_seconds_input
+        self.assertEqual(control.singleStep(), 10)
+        control.setValue(0)
+        self.assertEqual(control.value(), 10)
+        control.setValue(4000)
+        self.assertEqual(control.value(), 3600)
+
+    def test_three_page_changes_save_together(self):
+        control = self.window.behavior_page.reading_idle_seconds_input
+        control.setValue(120)
+        self.window.select_page("appearance")
+        self.window.appearance_page.width_input.setValue(400)
+        self.window.select_page("general")
+        self.window.general_page.always_on_top_check.setChecked(True)
+        self.window.select_page("behavior")
+        self.assertEqual(control.value(), 120)
+        self.assertEqual(self.settings.saved, [])
+        self.assertTrue(self.window.apply_changes())
+        saved = self.settings.saved[0]
+        self.assertEqual(saved.reading_idle_seconds, 120)
+        self.assertEqual(saved.width, 400)
+        self.assertTrue(saved.always_on_top)
+        self.assertFalse(self.window.is_dirty)
+
+    def test_cancel_restores_behavior_without_saving(self):
+        control = self.window.behavior_page.reading_idle_seconds_input
+        control.setValue(120)
+        self.window.cancel_changes()
+        self.assertEqual(control.value(), self.settings.snapshot.reading_idle_seconds)
+        self.assertFalse(self.window.is_dirty)
+        self.assertEqual(self.settings.saved, [])
+
+    def test_reverting_behavior_clears_dirty_state(self):
+        control = self.window.behavior_page.reading_idle_seconds_input
+        control.setValue(120)
+        control.setValue(self.settings.snapshot.reading_idle_seconds)
+        self.assertFalse(self.window.is_dirty)
+        self.assertFalse(self.window.apply_button.isEnabled())
+
+    def test_failed_behavior_save_preserves_draft(self):
+        control = self.window.behavior_page.reading_idle_seconds_input
+        control.setValue(120)
+        with (
+            patch.object(self.settings, "save", side_effect=SettingsValidationError("無效秒數")),
+            patch("ui.dashboard.dashboard_window.QMessageBox.warning"),
+        ):
+            self.assertFalse(self.window.apply_changes())
+        self.assertEqual(control.value(), 120)
+        self.assertTrue(self.window.is_dirty)
+        self.assertEqual(self.settings.saved, [])
+
+    def test_dirty_behavior_close_cancel_preserves_draft(self):
+        self.window.behavior_page.reading_idle_seconds_input.setValue(120)
+        event = QCloseEvent()
+        with patch("ui.dashboard.dashboard_window.QMessageBox.question",
+                   return_value=QMessageBox.StandardButton.Cancel):
+            self.window.closeEvent(event)
+        self.assertFalse(event.isAccepted())
+        self.assertTrue(self.window.is_dirty)
+
+    def test_dirty_behavior_close_discard_restores_value(self):
+        control = self.window.behavior_page.reading_idle_seconds_input
+        control.setValue(120)
+        event = QCloseEvent()
+        with patch("ui.dashboard.dashboard_window.QMessageBox.question",
+                   return_value=QMessageBox.StandardButton.Discard):
+            self.window.closeEvent(event)
+        self.assertTrue(event.isAccepted())
+        self.assertEqual(control.value(), self.settings.snapshot.reading_idle_seconds)
+        self.assertFalse(self.window.is_dirty)
+        self.assertEqual(self.settings.saved, [])
+
+    def test_dirty_behavior_close_save_persists_value(self):
+        self.window.behavior_page.reading_idle_seconds_input.setValue(120)
+        event = QCloseEvent()
+        with patch("ui.dashboard.dashboard_window.QMessageBox.question",
+                   return_value=QMessageBox.StandardButton.Save):
+            self.window.closeEvent(event)
+        self.assertTrue(event.isAccepted())
+        self.assertEqual(self.settings.saved[0].reading_idle_seconds, 120)
+        self.assertFalse(self.window.is_dirty)
+
 
 if __name__ == "__main__":
     unittest.main()

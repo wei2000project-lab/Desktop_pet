@@ -4,7 +4,7 @@ from typing import Callable
 
 from PySide6.QtWidgets import QStyle, QWidget
 
-from ui.dashboard.pages import AppearancePage, GeneralPage, PlaceholderPage
+from ui.dashboard.pages import AppearancePage, BehaviorPage, GeneralPage, PlaceholderPage
 
 
 PageFactory = Callable[[], QWidget]
@@ -21,7 +21,6 @@ class PageDefinition:
 def default_page_definitions() -> tuple[PageDefinition, ...]:
     """Return the single ordered source used by both navigation and content."""
     pages = (
-        ("behavior", "行為", QStyle.SP_BrowserReload, "管理桌寵待機與動畫行為。"),
         ("ai", "AI", QStyle.SP_ComputerIcon, "管理模型、連線與記憶設定。"),
         ("personality", "人格", QStyle.SP_DialogYesButton, "選擇內建人格或編輯自訂人格。"),
     )
@@ -32,5 +31,6 @@ def default_page_definitions() -> tuple[PageDefinition, ...]:
     return (
         PageDefinition("general", "一般", QStyle.SP_FileDialogInfoView, GeneralPage),
         PageDefinition("appearance", "外觀", QStyle.SP_DesktopIcon, AppearancePage),
+        PageDefinition("behavior", "行為", QStyle.SP_BrowserReload, BehaviorPage),
         *placeholders,
     )
