@@ -17,6 +17,7 @@ from app.utils.logger import logger
 from ui.dashboard.page_registry import PageDefinition, default_page_definitions
 from ui.dashboard.pages import AIPage, AppearancePage, BehaviorPage, GeneralPage
 from ui.dashboard.sidebar import DashboardSidebar
+from ui.dashboard.connection_test_controller import ConnectionTestController
 
 
 class DashboardWindow(QMainWindow):
@@ -95,6 +96,9 @@ class DashboardWindow(QMainWindow):
                 page.load_snapshot(self._draft_snapshot)
                 page.settings_changed.connect(self._update_ai_settings)
         content_layout.addWidget(self.content_stack, 1)
+        self.connection_tests = ConnectionTestController(self)
+        if self.ai_page is not None:
+            self.ai_page.test_requested.connect(self.connection_tests.start)
 
         action_bar = QWidget()
         action_bar.setObjectName("dashboardActionBar")
@@ -223,6 +227,7 @@ class DashboardWindow(QMainWindow):
 
     def closeEvent(self, event) -> None:
         if self._allow_close or not self.is_dirty:
+            self.connection_tests.invalidate()
             event.accept()
             return
 
@@ -237,17 +242,21 @@ class DashboardWindow(QMainWindow):
         )
         if result == QMessageBox.StandardButton.Save:
             if self.apply_changes():
+                self.connection_tests.invalidate()
                 event.accept()
             else:
                 event.ignore()
         elif result == QMessageBox.StandardButton.Discard:
             self._restore_original()
+            self.connection_tests.invalidate()
             event.accept()
         else:
             event.ignore()
 
     def showEvent(self, event) -> None:
         self._allow_close = False
+        if self.ai_page is not None:
+            self.ai_page.reset_test_display()
         super().showEvent(event)
 
     def resizeEvent(self, event) -> None:
@@ -348,6 +357,22 @@ class DashboardWindow(QMainWindow):
                 border-radius: 6px;
                 min-height: 32px;
                 padding-left: 8px;
+            }
+            QPushButton#dashboardNumberStepButton {
+                background-color: #ffffff;
+                border: 1px solid #cfcad4;
+                border-radius: 6px;
+                color: #514b59;
+                font-size: 18px;
+                padding: 0;
+            }
+            QPushButton#dashboardNumberStepButton:hover {
+                background-color: #ece8f2;
+                border-color: #7b4ba0;
+            }
+            QPushButton#dashboardNumberStepButton:disabled {
+                color: #aaa4b0;
+                background-color: #f4f2f6;
             }
             #dashboardActionBar {
                 background-color: #f8f7f9;

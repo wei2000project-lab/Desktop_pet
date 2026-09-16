@@ -1,9 +1,10 @@
 from PySide6.QtCore import QSignalBlocker, Signal
 from PySide6.QtWidgets import (
-    QFormLayout, QLabel, QScrollArea, QSpinBox, QVBoxLayout, QWidget,
+    QFormLayout, QLabel, QScrollArea, QVBoxLayout, QWidget,
 )
 
 from app.settings import SettingsSnapshot
+from ui.dashboard.number_input import IntegerInput
 
 
 class BehaviorPage(QScrollArea):
@@ -39,7 +40,7 @@ class BehaviorPage(QScrollArea):
         form = QFormLayout()
         form.setSpacing(14)
         form.setRowWrapPolicy(QFormLayout.WrapLongRows)
-        self.reading_idle_seconds_input = QSpinBox()
+        self.reading_idle_seconds_input = IntegerInput()
         self.reading_idle_seconds_input.setRange(10, 3600)
         self.reading_idle_seconds_input.setSingleStep(10)
         self.reading_idle_seconds_input.setSuffix(" 秒")

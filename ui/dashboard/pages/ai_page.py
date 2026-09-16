@@ -2,15 +2,17 @@ from contextlib import ExitStack
 
 from PySide6.QtCore import QSignalBlocker, Signal
 from PySide6.QtWidgets import (
-    QCheckBox, QDoubleSpinBox, QFormLayout, QLabel, QLineEdit,
-    QScrollArea, QSpinBox, QVBoxLayout, QWidget,
+    QCheckBox, QFormLayout, QLabel, QLineEdit,
+    QScrollArea, QVBoxLayout, QWidget, QPushButton, QHBoxLayout,
 )
 
-from app.settings import SettingsSnapshot
+from app.settings import ApiKeyEntry, SettingsSnapshot
+from ui.dashboard.number_input import DecimalInput, IntegerInput
 
 
 class AIPage(QScrollArea):
     settings_changed = Signal(dict)
+    test_requested = Signal(int)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -29,12 +31,28 @@ class AIPage(QScrollArea):
         description.setWordWrap(True)
         layout.addWidget(description)
 
+        self.api_key_rows = []
+        self._next_row_id = 0
+        self._loading = False
+        key_form = self._card(layout, "API Keys")
+        self.api_keys_container = QWidget()
+        self.api_keys_layout = QVBoxLayout(self.api_keys_container)
+        self.api_keys_layout.setContentsMargins(0, 0, 0, 0)
+        key_form.addRow(self.api_keys_container)
+        self.add_api_key_button = QPushButton("新增 API Key")
+        self.add_api_key_button.clicked.connect(lambda: self.add_api_key_row())
+        key_form.addRow(self.add_api_key_button)
+        key_note = QLabel("金鑰以遮蔽方式顯示。測試使用目前輸入，不會自動儲存，且可能消耗服務額度。")
+        key_note.setObjectName("dashboardPageDescription")
+        key_note.setWordWrap(True)
+        key_form.addRow(key_note)
+
         model_form = self._card(layout, "模型設定")
         self.base_url_input = QLineEdit()
         self.base_url_input.setPlaceholderText("https://api.openai.com/v1")
         self.model_input = QLineEdit()
         self.model_input.setPlaceholderText("模型名稱")
-        self.temperature_input = QDoubleSpinBox()
+        self.temperature_input = DecimalInput()
         self.temperature_input.setRange(0.0, 2.0)
         self.temperature_input.setDecimals(1)
         self.temperature_input.setSingleStep(0.1)
@@ -43,19 +61,15 @@ class AIPage(QScrollArea):
         model_form.addRow("溫度：", self.temperature_input)
 
         memory_form = self._card(layout, "對話記憶")
-        self.max_memory_turns_input = QSpinBox()
+        self.max_memory_turns_input = IntegerInput()
         self.max_memory_turns_input.setRange(0, 50)
-        self.history_limit_input = QSpinBox()
+        self.history_limit_input = IntegerInput()
         self.history_limit_input.setRange(1, 100)
         self.conversation_summary_check = QCheckBox("啟用過去對話摘要")
         memory_form.addRow("最大記憶輪數：", self.max_memory_turns_input)
         memory_form.addRow("歷史紀錄上限：", self.history_limit_input)
         memory_form.addRow(self.conversation_summary_check)
 
-        note = QLabel("API Key 管理與連線測試將於下一階段搬入；本頁套用不會變更既有金鑰。")
-        note.setObjectName("dashboardPageDescription")
-        note.setWordWrap(True)
-        layout.addWidget(note)
         layout.addStretch(1)
         self.setWidget(content)
 
@@ -93,7 +107,10 @@ class AIPage(QScrollArea):
         return form
 
     def _emit_settings(self, _value) -> None:
+        if self._loading:
+            return
         self.settings_changed.emit({
+            "api_keys": self.collect_api_key_entries(),
             "base_url": self.base_url_input.text(),
             "model": self.model_input.text(),
             "temperature": self.temperature_input.value(),
@@ -108,6 +125,16 @@ class AIPage(QScrollArea):
             control.interpretText()
 
     def load_snapshot(self, snapshot: SettingsSnapshot) -> None:
+        self._loading = True
+        try:
+            for row in list(self.api_key_rows):
+                self.remove_api_key_row(row["id"], ensure_one=False)
+            for entry in snapshot.api_keys:
+                self.add_api_key_row(entry.name, entry.key)
+            if not self.api_key_rows:
+                self.add_api_key_row()
+        finally:
+            self._loading = False
         with ExitStack() as stack:
             for field, control in self._controls.items():
                 stack.enter_context(QSignalBlocker(control))
@@ -118,3 +145,94 @@ class AIPage(QScrollArea):
                     control.setChecked(value)
                 else:
                     control.setValue(value)
+
+    def add_api_key_row(self, name="", key=""):
+        self._next_row_id += 1
+        row_id = self._next_row_id
+        container = QWidget()
+        layout = QVBoxLayout(container)
+        layout.setContentsMargins(0, 0, 0, 0)
+        fields = QHBoxLayout()
+        name_input = QLineEdit(name)
+        name_input.setPlaceholderText("名稱")
+        name_input.setMaximumWidth(110)
+        name_input.setAccessibleName("API Key 名稱")
+        key_input = QLineEdit(key)
+        key_input.setEchoMode(QLineEdit.Password)
+        key_input.setPlaceholderText("API Key")
+        key_input.setAccessibleName("API Key")
+        test_button = QPushButton("測試")
+        remove_button = QPushButton("刪除")
+        remove_button.setObjectName("dashboardDangerButton")
+        for widget in (name_input, key_input, test_button, remove_button):
+            fields.addWidget(widget)
+        layout.addLayout(fields)
+        status = QLabel("")
+        status.setObjectName("dashboardPageDescription")
+        status.setWordWrap(True)
+        status.hide()
+        layout.addWidget(status)
+        row = {"id": row_id, "container": container, "name_input": name_input,
+               "key_input": key_input, "test_button": test_button,
+               "remove_button": remove_button, "status": status}
+        self.api_key_rows.append(row)
+        self.api_keys_layout.addWidget(container)
+        name_input.textChanged.connect(self._emit_settings)
+        key_input.textChanged.connect(self._emit_settings)
+        test_button.clicked.connect(lambda: self.test_requested.emit(row_id))
+        remove_button.clicked.connect(lambda: self.remove_api_key_row(row_id))
+        self._emit_settings(None)
+        return row
+
+    def row_for_id(self, row_id):
+        return next((row for row in self.api_key_rows if row["id"] == row_id), None)
+
+    def remove_api_key_row(self, row_id, ensure_one=True):
+        row = self.row_for_id(row_id)
+        if row is None:
+            return
+        self.api_key_rows.remove(row)
+        self.api_keys_layout.removeWidget(row["container"])
+        row["container"].hide()
+        row["container"].deleteLater()
+        if ensure_one and not self.api_key_rows:
+            self.add_api_key_row()
+        else:
+            self._emit_settings(None)
+
+    def collect_api_key_entries(self):
+        entries = []
+        for row in self.api_key_rows:
+            key = row["key_input"].text().strip()
+            if key:
+                name = row["name_input"].text().strip() or f"Key {len(entries) + 1}"
+                entries.append(ApiKeyEntry(name, key))
+        return tuple(entries)
+
+    def connection_fingerprint(self, row_id, verify_ssl):
+        row = self.row_for_id(row_id)
+        return (self.base_url_input.text().strip(), self.model_input.text().strip(),
+                row["key_input"].text().strip(), verify_ssl)
+
+    def begin_test(self, row_id):
+        row = self.row_for_id(row_id)
+        if row is not None:
+            row["test_button"].setEnabled(False)
+            row["test_button"].setText("測試中")
+            row["status"].setText("正在背景測試連線…")
+            row["status"].show()
+
+    def finish_test(self, row_id, message):
+        row = self.row_for_id(row_id)
+        if row is not None:
+            row["test_button"].setEnabled(True)
+            row["test_button"].setText("測試")
+            row["status"].setText(message)
+            row["status"].show()
+
+    def reset_test_display(self):
+        for row in self.api_key_rows:
+            row["test_button"].setEnabled(True)
+            row["test_button"].setText("測試")
+            row["status"].clear()
+            row["status"].hide()

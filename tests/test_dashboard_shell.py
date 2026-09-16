@@ -6,6 +6,9 @@ from unittest.mock import patch
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from PySide6.QtGui import QCloseEvent
+from PySide6.QtCore import Qt
+from PySide6.QtTest import QTest
+from PySide6.QtWidgets import QAbstractSpinBox
 from PySide6.QtWidgets import QApplication, QMessageBox, QScrollArea
 
 from app.settings import ApiKeyEntry, SettingsService, SettingsSnapshot, SettingsValidationError
@@ -370,6 +373,7 @@ class DashboardShellTests(unittest.TestCase):
                            verify_ssl=False, custom_personality="保留人格")
         self.window._original_snapshot = snapshot
         self.window._draft_snapshot = snapshot
+        self.window._load_pages(snapshot)
         page = self.window.ai_page
         page.base_url_input.setText(" https://example.test/v1 ")
         page.model_input.setText(" test-model ")
@@ -443,6 +447,53 @@ class DashboardShellTests(unittest.TestCase):
             self.window.closeEvent(event)
         self.assertFalse(event.isAccepted())
         self.assertTrue(self.window.is_dirty)
+
+    def test_all_numeric_controls_have_clickable_separate_buttons(self):
+        self.window.show()
+        self.window.resize(650, 600)
+        controls = (
+            ("appearance", self.window.appearance_page.width_input, 300),
+            ("appearance", self.window.appearance_page.height_input, 300),
+            ("behavior", self.window.behavior_page.reading_idle_seconds_input, 300),
+            ("ai", self.window.ai_page.temperature_input, 0.7),
+            ("ai", self.window.ai_page.max_memory_turns_input, 6),
+            ("ai", self.window.ai_page.history_limit_input, 20),
+        )
+        for page_key, control, initial in controls:
+            with self.subTest(page=page_key, control=control.accessibleName()):
+                self.window.select_page(page_key)
+                page = self.window.content_stack.currentWidget()
+                page.ensureWidgetVisible(control)
+                control.setValue(initial)
+                self.app.processEvents()
+                self.assertEqual(control.editor.buttonSymbols(), QAbstractSpinBox.NoButtons)
+                self.assertFalse(control.editor.geometry().intersects(control.plus_button.geometry()))
+                self.assertFalse(control.editor.geometry().intersects(control.minus_button.geometry()))
+                QTest.mouseClick(control.plus_button, Qt.LeftButton)
+                self.assertAlmostEqual(control.value(), initial + control.singleStep())
+                QTest.mouseClick(control.minus_button, Qt.LeftButton)
+                self.assertAlmostEqual(control.value(), initial)
+
+    def test_numeric_buttons_disable_at_bounds(self):
+        control = self.window.appearance_page.width_input
+        control.setValue(control.minimum())
+        self.assertFalse(control.minus_button.isEnabled())
+        self.assertTrue(control.plus_button.isEnabled())
+        control.setValue(control.maximum())
+        self.assertTrue(control.minus_button.isEnabled())
+        self.assertFalse(control.plus_button.isEnabled())
+
+    def test_numeric_input_still_accepts_keyboard_editing(self):
+        control = self.window.appearance_page.width_input
+        editor = control.editor
+        editor.setFocus()
+        editor.selectAll()
+        QTest.keyClicks(editor, "420")
+        QTest.keyClick(editor, Qt.Key_Return)
+        self.assertEqual(control.value(), 420)
+        self.assertTrue(self.window.is_dirty)
+        self.assertTrue(self.window.apply_changes())
+        self.assertEqual(self.settings.saved[0].width, 420)
 
 if __name__ == "__main__":
     unittest.main()

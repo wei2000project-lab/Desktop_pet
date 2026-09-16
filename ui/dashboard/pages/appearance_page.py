@@ -1,9 +1,10 @@
 from PySide6.QtCore import QSignalBlocker, Signal
 from PySide6.QtWidgets import (
-    QFormLayout, QLabel, QScrollArea, QSpinBox, QVBoxLayout, QWidget,
+    QFormLayout, QLabel, QScrollArea, QVBoxLayout, QWidget,
 )
 
 from app.settings import SettingsSnapshot
+from ui.dashboard.number_input import IntegerInput
 
 
 class AppearancePage(QScrollArea):
@@ -53,8 +54,8 @@ class AppearancePage(QScrollArea):
         self.height_input.valueChanged.connect(self._emit_size)
 
     @staticmethod
-    def _size_input(name: str) -> QSpinBox:
-        control = QSpinBox()
+    def _size_input(name: str) -> IntegerInput:
+        control = IntegerInput()
         control.setRange(100, 1000)
         control.setSingleStep(10)
         control.setSuffix(" px")
