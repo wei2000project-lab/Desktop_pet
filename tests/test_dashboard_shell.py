@@ -8,7 +8,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 from PySide6.QtGui import QCloseEvent
 from PySide6.QtWidgets import QApplication, QMessageBox, QScrollArea
 
-from app.settings import SettingsSnapshot
+from app.settings import SettingsSnapshot, SettingsValidationError
 from ui.dashboard import DashboardWindow
 from ui.dashboard.page_registry import default_page_definitions
 from ui.dashboard.sidebar import DashboardSidebar
@@ -165,6 +165,73 @@ class DashboardShellTests(unittest.TestCase):
             self.window.general_page.clear_history_button.click()
 
         self.assertEqual(self.settings.history_clear_count, 1)
+
+    def test_appearance_loads_without_dirtying_settings(self):
+        page = self.window.appearance_page
+        self.assertEqual(page.width_input.value(), self.settings.snapshot.width)
+        self.assertEqual(page.height_input.value(), self.settings.snapshot.height)
+        self.assertFalse(self.window.is_dirty)
+
+    def test_size_controls_enforce_range_and_step(self):
+        for control in (self.window.appearance_page.width_input,
+                        self.window.appearance_page.height_input):
+            self.assertEqual(control.singleStep(), 10)
+            control.setValue(1)
+            self.assertEqual(control.value(), 100)
+            control.setValue(2000)
+            self.assertEqual(control.value(), 1000)
+
+    def test_cross_page_changes_save_together(self):
+        page = self.window.appearance_page
+        page.width_input.setValue(400)
+        page.height_input.setValue(350)
+        self.window.select_page("general")
+        self.window.general_page.always_on_top_check.setChecked(True)
+        self.window.select_page("appearance")
+        self.assertEqual(page.width_input.value(), 400)
+        self.assertEqual(self.settings.saved, [])
+        self.assertTrue(self.window.apply_changes())
+        saved = self.settings.saved[0]
+        self.assertEqual((saved.width, saved.height), (400, 350))
+        self.assertTrue(saved.always_on_top)
+        self.assertFalse(self.window.is_dirty)
+
+    def test_cancel_restores_both_pages(self):
+        self.window.appearance_page.width_input.setValue(500)
+        self.window.general_page.always_on_top_check.setChecked(True)
+        self.window.cancel_changes()
+        self.assertEqual(self.window.appearance_page.width_input.value(),
+                         self.settings.snapshot.width)
+        self.assertFalse(self.window.is_dirty)
+        self.assertEqual(self.settings.saved, [])
+
+    def test_reverting_size_clears_dirty_state(self):
+        control = self.window.appearance_page.width_input
+        control.setValue(500)
+        control.setValue(self.settings.snapshot.width)
+        self.assertFalse(self.window.is_dirty)
+        self.assertFalse(self.window.apply_button.isEnabled())
+
+    def test_save_failure_preserves_size_draft(self):
+        self.window.appearance_page.width_input.setValue(500)
+        with (
+            patch.object(self.settings, "save", side_effect=SettingsValidationError("無效尺寸")),
+            patch("ui.dashboard.dashboard_window.QMessageBox.warning"),
+        ):
+            self.assertFalse(self.window.apply_changes())
+        self.assertTrue(self.window.is_dirty)
+        self.assertEqual(self.window.appearance_page.width_input.value(), 500)
+
+    def test_discarding_close_restores_size(self):
+        self.window.appearance_page.width_input.setValue(500)
+        event = QCloseEvent()
+        with patch("ui.dashboard.dashboard_window.QMessageBox.question",
+                   return_value=QMessageBox.StandardButton.Discard):
+            self.window.closeEvent(event)
+        self.assertTrue(event.isAccepted())
+        self.assertEqual(self.window.appearance_page.width_input.value(),
+                         self.settings.snapshot.width)
+        self.assertEqual(self.settings.saved, [])
 
     def test_discarding_close_restores_original_draft(self):
         self.window.general_page.always_on_top_check.setChecked(True)

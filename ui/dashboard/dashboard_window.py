@@ -15,7 +15,7 @@ from app.settings import SettingsValidationError, settings_service
 from app.utils.logger import logger
 
 from ui.dashboard.page_registry import PageDefinition, default_page_definitions
-from ui.dashboard.pages import GeneralPage
+from ui.dashboard.pages import AppearancePage, GeneralPage
 from ui.dashboard.sidebar import DashboardSidebar
 
 
@@ -70,6 +70,7 @@ class DashboardWindow(QMainWindow):
         self.content_stack = QStackedWidget()
         self.content_stack.setObjectName("dashboardContentStack")
         self.general_page: GeneralPage | None = None
+        self.appearance_page: AppearancePage | None = None
         for definition in self.page_definitions:
             page = definition.factory()
             page.setObjectName(f"dashboardPage_{definition.key}")
@@ -79,6 +80,10 @@ class DashboardWindow(QMainWindow):
                 page.load_snapshot(self._draft_snapshot)
                 page.settings_changed.connect(self._update_always_on_top)
                 page.clear_history_requested.connect(self._confirm_clear_history)
+            elif definition.key == "appearance" and isinstance(page, AppearancePage):
+                self.appearance_page = page
+                page.load_snapshot(self._draft_snapshot)
+                page.size_changed.connect(self._update_pet_size)
         content_layout.addWidget(self.content_stack, 1)
 
         action_bar = QWidget()
@@ -139,7 +144,18 @@ class DashboardWindow(QMainWindow):
         self.apply_button.setEnabled(dirty)
         self.change_status_label.setText("有未儲存的變更" if dirty else "沒有未儲存的變更")
 
+    def _update_pet_size(self, width: int, height: int) -> None:
+        self._draft_snapshot = replace(self._draft_snapshot, width=width, height=height)
+        self._update_dirty_state()
+
+    def _load_pages(self, snapshot) -> None:
+        for page in (self.general_page, self.appearance_page):
+            if page is not None:
+                page.load_snapshot(snapshot)
+
     def apply_changes(self) -> bool:
+        if self.appearance_page is not None:
+            self.appearance_page.commit_pending_input()
         try:
             saved = self.settings_backend.save(self._draft_snapshot)
         except SettingsValidationError as exc:
@@ -152,8 +168,7 @@ class DashboardWindow(QMainWindow):
 
         self._original_snapshot = saved
         self._draft_snapshot = saved
-        if self.general_page is not None:
-            self.general_page.load_snapshot(saved)
+        self._load_pages(saved)
         self._update_dirty_state()
         self.change_status_label.setText("設定已儲存")
         return True
@@ -165,8 +180,7 @@ class DashboardWindow(QMainWindow):
 
     def _restore_original(self) -> None:
         self._draft_snapshot = self._original_snapshot
-        if self.general_page is not None:
-            self.general_page.load_snapshot(self._original_snapshot)
+        self._load_pages(self._original_snapshot)
         self._update_dirty_state()
 
     def _confirm_clear_history(self) -> None:
@@ -303,9 +317,17 @@ class DashboardWindow(QMainWindow):
                 font-size: 16px;
                 font-weight: 600;
             }
-            #dashboardSettingsCard QCheckBox {
+            #dashboardSettingsCard QLabel, #dashboardSettingsCard QCheckBox {
                 color: #3f3944;
                 spacing: 8px;
+            }
+            #dashboardSettingsCard QSpinBox {
+                background-color: #ffffff;
+                color: #3f3944;
+                border: 1px solid #cfcad4;
+                border-radius: 6px;
+                min-height: 32px;
+                padding-left: 8px;
             }
             #dashboardActionBar {
                 background-color: #f8f7f9;
