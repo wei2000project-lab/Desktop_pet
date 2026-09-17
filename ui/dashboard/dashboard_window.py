@@ -212,6 +212,16 @@ class DashboardWindow(QMainWindow):
         self._allow_close = True
         self.close()
 
+    def load_settings(self) -> None:
+        """Reload on reopening, never on recalling a visible draft."""
+        snapshot = self.settings_backend.load()
+        self.connection_tests.invalidate()
+        self._original_snapshot = snapshot
+        self._draft_snapshot = snapshot
+        self._load_pages(snapshot)
+        self._allow_close = False
+        self._update_dirty_state()
+
     def _restore_original(self) -> None:
         self._draft_snapshot = self._original_snapshot
         self._load_pages(self._original_snapshot)
@@ -266,8 +276,6 @@ class DashboardWindow(QMainWindow):
 
     def showEvent(self, event) -> None:
         self._allow_close = False
-        if self.ai_page is not None:
-            self.ai_page.reset_test_display()
         super().showEvent(event)
 
     def resizeEvent(self, event) -> None:

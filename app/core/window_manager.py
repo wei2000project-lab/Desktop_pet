@@ -50,16 +50,16 @@ class WindowManager:
         self.show_bubble()
 
     def show_settings(self):
-        if not self.settings_window:
-            try:
-                from ui.settings_window import SettingsWindow
-                self.settings_window = SettingsWindow()
-            except Exception as e:
-                logger.error(f"Failed to create SettingsWindow: {e}", exc_info=True)
-                return
-        else:
-            self.settings_window.load_settings()
-        self.settings_window.show()
+        try:
+            if self.settings_window is None:
+                from ui.dashboard import DashboardWindow
+                self.settings_window = DashboardWindow()
+            elif not self.settings_window.isVisible():
+                self.settings_window.load_settings()
+        except Exception:
+            logger.error("Failed to open Dashboard settings", exc_info=True)
+            return
+        self.settings_window.showNormal()
         self.settings_window.raise_()
         self.settings_window.activateWindow()
         logger.info("Settings window shown")
