@@ -1,179 +1,166 @@
-Desktop Pet [Size: 4.53 MB]
-├── app [Size: 142.78 KB]
-│   ├── ai [Size: 26.68 KB]
-│   │   ├── __init__.py [Size: 31.0 B] [.py]
-│   │   ├── api_keys.py [Size: 1.42 KB] [.py]
-│   │   ├── client.py [Size: 7.84 KB] [.py]
-│   │   ├── conversation_manager.py [Size: 8.51 KB] [.py]
-│   │   ├── conversation_memory.py [Size: 2.13 KB] [.py]
-│   │   ├── prompt_builder.py [Size: 3.07 KB] [.py]
-│   │   └── provider.py [Size: 3.67 KB] [.py]
-│   ├── animation [Size: 9.42 KB]
-│   │   ├── __init__.py [Size: 38.0 B] [.py]
-│   │   ├── animator.py [Size: 6.68 KB] [.py]
-│   │   ├── blink.py [Size: 0.63 KB] [.py]
-│   │   ├── look_around.py [Size: 0.86 KB] [.py]
-│   │   └── reading.py [Size: 1.22 KB] [.py]
-│   ├── control [Size: 51.37 KB]
-│   │   ├── discovery [Size: 10.36 KB]
-│   │   │   ├── __init__.py [Size: 48.0 B] [.py]
-│   │   │   ├── index.py [Size: 2.6 KB] [.py]
-│   │   │   └── scanner.py [Size: 7.71 KB] [.py]
-│   │   ├── execution [Size: 20.93 KB]
-│   │   │   ├── __init__.py [Size: 38.0 B] [.py]
-│   │   │   ├── launcher.py [Size: 2.1 KB] [.py]
-│   │   │   ├── request_handler.py [Size: 12.51 KB] [.py]
-│   │   │   ├── schedule.py [Size: 1.86 KB] [.py]
-│   │   │   └── service.py [Size: 4.42 KB] [.py]
-│   │   ├── resolution [Size: 18.16 KB]
-│   │   │   ├── __init__.py [Size: 47.0 B] [.py]
-│   │   │   ├── aliases.py [Size: 3.99 KB] [.py]
-│   │   │   ├── confidence.py [Size: 869.0 B] [.py]
-│   │   │   ├── resolver.py [Size: 7.14 KB] [.py]
-│   │   │   └── selector.py [Size: 6.14 KB] [.py]
-│   │   ├── __init__.py [Size: 65.0 B] [.py]
-│   │   └── preferences.py [Size: 1.86 KB] [.py]
-│   ├── core [Size: 28.39 KB]
-│   │   ├── __init__.py [Size: 48.0 B] [.py]
-│   │   ├── application.py [Size: 2.05 KB] [.py]
-│   │   ├── config_manager.py [Size: 14.97 KB] [.py]
-│   │   ├── data_migration.py [Size: 3.0 KB] [.py]
-│   │   ├── event_bus.py [Size: 2.44 KB] [.py]
-│   │   ├── intent_router.py [Size: 1.39 KB] [.py]
-│   │   ├── paths.py [Size: 0.49 KB] [.py]
-│   │   ├── user_message_router.py [Size: 717.0 B] [.py]
-│   │   └── window_manager.py [Size: 3.29 KB] [.py]
-│   ├── logs [Size: 0 B]
-│   │   └── app.log [Size: 0 B] [.log]
-│   ├── settings [Size: 7.23 KB]
-│   │   ├── connection_test.py [Size: 1.86 KB] [.py]
-│   │   ├── __init__.py [Size: 0.34 KB] [.py]
-│   │   ├── model.py [Size: 0.81 KB] [.py]
-│   │   └── service.py [Size: 6.08 KB] [.py]
-│   ├── utils [Size: 1.65 KB]
-│   │   ├── __init__.py [Size: 31.0 B] [.py]
-│   │   └── logger.py [Size: 1.62 KB] [.py]
-│   ├── web [Size: 17.99 KB]
-│   │   ├── __init__.py [Size: 435.0 B] [.py]
-│   │   ├── context.py [Size: 2.16 KB] [.py]
-│   │   ├── decision.py [Size: 2.9 KB] [.py]
-│   │   ├── extractor.py [Size: 4.04 KB] [.py]
-│   │   ├── search.py [Size: 4.86 KB] [.py]
-│   │   └── service.py [Size: 3.61 KB] [.py]
-│   └── __init__.py [Size: 40.0 B] [.py]
-├── assets [Size: 3.96 MB]
-│   ├── pet [Size: 1.87 MB]
-│   │   ├── animations [Size: 1.4 MB]
-│   │   │   ├── eyes_closing [Size: 336.48 KB]
-│   │   │   │   ├── Nova_eyes_closing_01.png [Size: 116.4 KB] [.png]
-│   │   │   │   ├── Nova_eyes_closing_02.png [Size: 110.32 KB] [.png]
-│   │   │   │   └── Nova_eyes_closing_03.png [Size: 109.76 KB] [.png]
-│   │   │   ├── look_around [Size: 347.71 KB]
-│   │   │   │   ├── Nova_looking_front.png [Size: 116.4 KB] [.png]
-│   │   │   │   ├── Nova_looking_left.png [Size: 115.76 KB] [.png]
-│   │   │   │   └── Nova_looking_right.png [Size: 115.55 KB] [.png]
-│   │   │   └── reading [Size: 747.68 KB]
-│   │   │       ├── reading_01.png [Size: 152.54 KB] [.png]
-│   │   │       ├── reading_02.png [Size: 146.54 KB] [.png]
-│   │   │       ├── reading_03.png [Size: 146.05 KB] [.png]
-│   │   │       ├── reading_04.png [Size: 151.38 KB] [.png]
-│   │   │       └── reading_05.png [Size: 151.17 KB] [.png]
-│   │   └── emotions [Size: 483.41 KB]
-│   │       ├── Nova_gaze.png [Size: 110.03 KB] [.png]
-│   │       ├── Nova_happy.png [Size: 109.69 KB] [.png]
-│   │       ├── Nova_idle.png [Size: 147.67 KB] [.png]
-│   │       └── Nova_surprised.png [Size: 116.01 KB] [.png]
-│   └── 素材資料 [Size: 2.09 MB]
-│       ├── 4c9778a4-3304-4de0-a2b1-e597ba134b0b.png [Size: 187.91 KB] [.png]
-│       ├── Codex 圖像 2026年9月14日 下午03_00_41.png [Size: 830.83 KB] [.png]
-│       ├── Nova_right.png [Size: 780.39 KB] [.png]
-│       ├── Nova.png [Size: 147.67 KB] [.png]
-│       └── reading_01.png [Size: 196.55 KB] [.png]
-├── data [Size: 55.74 KB]
-│   ├── app_control [Size: 2.7 KB]
-│   │   └── aliases.json [Size: 2.7 KB] [.json]
-│   ├── config [Size: 458.0 B]
-│   │   ├── app.defaults.ini [Size: 194.0 B] [.ini]
-│   │   └── prompt.json [Size: 264.0 B] [.json]
-│   └── runtime [Size: 52.59 KB]
-│       ├── api.ini [Size: 292.0 B] [.ini]
-│       ├── app.ini [Size: 229.0 B] [.ini]
-│       ├── apps.json [Size: 48.24 KB] [.json]
-│       ├── history.json [Size: 3.78 KB] [.json]
-│       ├── memory.json [Size: 3.0 B] [.json]
-│       └── preferences.json [Size: 64.0 B] [.json]
-├── logs [Size: 98.38 KB]
-│   └── app.log [Size: 98.38 KB] [.log]
-├── tests [Size: 119.47 KB]
-│   ├── test_ai_client.py [Size: 3.46 KB] [.py]
-│   ├── test_animation_asset_paths.py [Size: 1.53 KB] [.py]
-│   ├── test_animator_reading_source.py [Size: 1.58 KB] [.py]
-│   ├── test_api_keys.py [Size: 1.2 KB] [.py]
-│   ├── test_app_aliases.py [Size: 1.71 KB] [.py]
-│   ├── test_app_confidence.py [Size: 891.0 B] [.py]
-│   ├── test_app_control.py [Size: 15.05 KB] [.py]
-│   ├── test_app_open_confirmation_source.py [Size: 753.0 B] [.py]
-│   ├── test_app_open_request_handler.py [Size: 19.21 KB] [.py]
-│   ├── test_app_open_schedule_confirmation_source.py [Size: 630.0 B] [.py]
-│   ├── test_app_preference_choice_source.py [Size: 785.0 B] [.py]
-│   ├── test_app_preferences.py [Size: 992.0 B] [.py]
-│   ├── test_app_resolver.py [Size: 4.47 KB] [.py]
-│   ├── test_app_schedule.py [Size: 1.48 KB] [.py]
-│   ├── test_app_selector.py [Size: 9.83 KB] [.py]
-│   ├── test_bubble_toggle.py [Size: 1.57 KB] [.py]
-│   ├── test_chat_cancel_source.py [Size: 2.76 KB] [.py]
-│   ├── test_config_manager_paths.py [Size: 6.84 KB] [.py]
-│   ├── test_conversation_manager.py [Size: 3.37 KB] [.py]
-│   ├── test_conversation_memory.py [Size: 2.89 KB] [.py]
-│   ├── test_conversation_web_context_source.py [Size: 1013.0 B] [.py]
-│   ├── test_dashboard_api_keys.py [Size: 9.89 KB] [.py]
-│   ├── test_dashboard_entry.py [.py]
-│   ├── test_dashboard_personality.py [.py]
-│   ├── test_dashboard_shell.py [Size: 6.61 KB] [.py]
-│   ├── test_data_migration.py [Size: 2.57 KB] [.py]
-│   ├── test_intent_router.py [Size: 2.68 KB] [.py]
-│   ├── test_look_around_animation.py [Size: 3.42 KB] [.py]
-│   ├── test_main_entrypoint.py [Size: 635.0 B] [.py]
-│   ├── test_message_formatting.py [Size: 1.39 KB] [.py]
-│   ├── test_project_paths.py [Size: 1.62 KB] [.py]
-│   ├── test_prompt_builder.py [Size: 2.31 KB] [.py]
-│   ├── test_reading_animation.py [Size: 0.99 KB] [.py]
-│   ├── test_routing_source.py [Size: 695.0 B] [.py]
-│   ├── test_settings_service.py [Size: 4.0 KB] [.py]
-│   └── test_web_tools.py [Size: 7.07 KB] [.py]
-├── ui [Size: 70.35 KB]
-│   ├── dashboard [Size: 21.8 KB]
-│   │   ├── pages [Size: 4.58 KB]
-│   │   │   ├── __init__.py [Size: 162.0 B] [.py]
-│   │   │   ├── ai_page.py [Size: 9.69 KB] [.py]
-│   │   │   ├── appearance_page.py [Size: 2.76 KB] [.py]
-│   │   │   ├── behavior_page.py [Size: 2.52 KB] [.py]
-│   │   │   ├── general_page.py [Size: 3.1 KB] [.py]
-│   │   │   ├── personality_page.py [.py]
-│   │   │   └── placeholder_page.py [Size: 1.32 KB] [.py]
-│   │   ├── __init__.py [Size: 106.0 B] [.py]
-│   │   ├── dashboard_window.py [Size: 12.5 KB] [.py]
-│   │   ├── connection_test_controller.py [Size: 2.6 KB] [.py]
-│   │   ├── page_registry.py [Size: 1.2 KB] [.py]
-│   │   ├── number_input.py [.py]
-│   │   └── sidebar.py [Size: 3.43 KB] [.py]
-│   ├── pet [Size: 24.82 KB]
-│   │   ├── dialogs [Size: 2.81 KB]
-│   │   │   ├── __init__.py [Size: 48.0 B] [.py]
-│   │   │   ├── app_open_confirmation.py [Size: 1.71 KB] [.py]
-│   │   │   └── app_preference_choice.py [Size: 1.05 KB] [.py]
-│   │   ├── __init__.py [Size: 45.0 B] [.py]
-│   │   ├── bubble.py [Size: 13.3 KB] [.py]
-│   │   ├── desktop_pet.py [Size: 7.5 KB] [.py]
-│   │   └── message_formatting.py [Size: 1.16 KB] [.py]
-│   └── __init__.py [Size: 13.0 B] [.py]
-├── 過往開發計畫 [Size: 26.36 KB]
-│   ├── 架構重構計畫.md [Size: 17.39 KB] [.md]
-│   ├── 桌寵應用程式開啟MVP計畫.md [Size: 7.58 KB] [.md]
-│   └── 素材資源改動.md [Size: 1.4 KB] [.md]
-├── .gitignore [Size: 793.0 B]
-├── codegraph.html [Size: 70.53 KB] [.html]
-├── main.py [Size: 123.0 B] [.py]
-├── requirements.txt [Size: 32.0 B] [.txt]
-├── tree.txt [Size: 9.74 KB] [.txt]
-└── 桌寵重構與介面優化計畫書.md [Size: 13.6 KB] [.md]
+Desktop Pet（Git 追蹤檔案；不包含執行期資料）
+├── 過往開發計畫
+│   ├── 架構重構計畫.md
+│   ├── 桌寵應用程式開啟MVP計畫.md
+│   └── 素材資源改動.md
+├── app
+│   ├── ai
+│   │   ├── __init__.py
+│   │   ├── api_keys.py
+│   │   ├── client.py
+│   │   ├── conversation_manager.py
+│   │   ├── conversation_memory.py
+│   │   ├── prompt_builder.py
+│   │   └── provider.py
+│   ├── animation
+│   │   ├── __init__.py
+│   │   ├── animator.py
+│   │   ├── blink.py
+│   │   ├── look_around.py
+│   │   └── reading.py
+│   ├── control
+│   │   ├── discovery
+│   │   │   ├── __init__.py
+│   │   │   ├── index.py
+│   │   │   └── scanner.py
+│   │   ├── execution
+│   │   │   ├── __init__.py
+│   │   │   ├── launcher.py
+│   │   │   ├── request_handler.py
+│   │   │   ├── schedule.py
+│   │   │   └── service.py
+│   │   ├── resolution
+│   │   │   ├── __init__.py
+│   │   │   ├── aliases.py
+│   │   │   ├── confidence.py
+│   │   │   ├── resolver.py
+│   │   │   └── selector.py
+│   │   ├── __init__.py
+│   │   └── preferences.py
+│   ├── core
+│   │   ├── __init__.py
+│   │   ├── application.py
+│   │   ├── config_manager.py
+│   │   ├── data_migration.py
+│   │   ├── event_bus.py
+│   │   ├── intent_router.py
+│   │   ├── paths.py
+│   │   ├── user_message_router.py
+│   │   └── window_manager.py
+│   ├── settings
+│   │   ├── __init__.py
+│   │   ├── connection_test.py
+│   │   ├── model.py
+│   │   └── service.py
+│   ├── utils
+│   │   ├── __init__.py
+│   │   └── logger.py
+│   ├── web
+│   │   ├── __init__.py
+│   │   ├── context.py
+│   │   ├── decision.py
+│   │   ├── extractor.py
+│   │   ├── search.py
+│   │   └── service.py
+│   └── __init__.py
+├── assets
+│   ├── 素材資料
+│   │   ├── 4c9778a4-3304-4de0-a2b1-e597ba134b0b.png
+│   │   ├── Codex 圖像 2026年9月14日 下午03_00_41.png
+│   │   ├── Nova_right.png
+│   │   ├── Nova.png
+│   │   └── reading_01.png
+│   └── pet
+│       ├── animations
+│       │   ├── eyes_closing
+│       │   │   ├── Nova_eyes_closing_01.png
+│       │   │   ├── Nova_eyes_closing_02.png
+│       │   │   └── Nova_eyes_closing_03.png
+│       │   ├── look_around
+│       │   │   ├── Nova_looking_front.png
+│       │   │   ├── Nova_looking_left.png
+│       │   │   └── Nova_looking_right.png
+│       │   └── reading
+│       │       ├── reading_01.png
+│       │       ├── reading_02.png
+│       │       ├── reading_03.png
+│       │       ├── reading_04.png
+│       │       └── reading_05.png
+│       └── emotions
+│           ├── Nova_gaze.png
+│           ├── Nova_happy.png
+│           ├── Nova_idle.png
+│           └── Nova_surprised.png
+├── data
+│   ├── app_control
+│   │   └── aliases.json
+│   └── config
+│       ├── app.defaults.ini
+│       └── prompt.json
+├── tests
+│   ├── test_ai_client.py
+│   ├── test_animation_asset_paths.py
+│   ├── test_animator_reading_source.py
+│   ├── test_api_keys.py
+│   ├── test_app_aliases.py
+│   ├── test_app_confidence.py
+│   ├── test_app_control.py
+│   ├── test_app_open_confirmation_source.py
+│   ├── test_app_open_request_handler.py
+│   ├── test_app_open_schedule_confirmation_source.py
+│   ├── test_app_preference_choice_source.py
+│   ├── test_app_preferences.py
+│   ├── test_app_resolver.py
+│   ├── test_app_schedule.py
+│   ├── test_app_selector.py
+│   ├── test_bubble_toggle.py
+│   ├── test_chat_cancel_source.py
+│   ├── test_config_manager_paths.py
+│   ├── test_conversation_manager.py
+│   ├── test_conversation_memory.py
+│   ├── test_conversation_web_context_source.py
+│   ├── test_dashboard_api_keys.py
+│   ├── test_dashboard_entry.py
+│   ├── test_dashboard_personality.py
+│   ├── test_dashboard_shell.py
+│   ├── test_data_migration.py
+│   ├── test_intent_router.py
+│   ├── test_look_around_animation.py
+│   ├── test_main_entrypoint.py
+│   ├── test_message_formatting.py
+│   ├── test_project_paths.py
+│   ├── test_prompt_builder.py
+│   ├── test_reading_animation.py
+│   ├── test_routing_source.py
+│   ├── test_settings_service.py
+│   └── test_web_tools.py
+├── ui
+│   ├── dashboard
+│   │   ├── pages
+│   │   │   ├── __init__.py
+│   │   │   ├── ai_page.py
+│   │   │   ├── appearance_page.py
+│   │   │   ├── behavior_page.py
+│   │   │   ├── general_page.py
+│   │   │   └── personality_page.py
+│   │   ├── __init__.py
+│   │   ├── connection_test_controller.py
+│   │   ├── dashboard_window.py
+│   │   ├── number_input.py
+│   │   ├── page_registry.py
+│   │   └── sidebar.py
+│   ├── pet
+│   │   ├── dialogs
+│   │   │   ├── __init__.py
+│   │   │   ├── app_open_confirmation.py
+│   │   │   └── app_preference_choice.py
+│   │   ├── __init__.py
+│   │   ├── bubble.py
+│   │   ├── desktop_pet.py
+│   │   └── message_formatting.py
+│   └── __init__.py
+├── .gitignore
+├── 桌寵重構與介面優化計畫書.md
+├── main.py
+├── requirements.txt
+└── tree.txt

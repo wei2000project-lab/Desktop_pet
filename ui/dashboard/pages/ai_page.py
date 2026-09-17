@@ -229,10 +229,3 @@ class AIPage(QScrollArea):
             row["test_button"].setText("測試")
             row["status"].setText(message)
             row["status"].show()
-
-    def reset_test_display(self):
-        for row in self.api_key_rows:
-            row["test_button"].setEnabled(True)
-            row["test_button"].setText("測試")
-            row["status"].clear()
-            row["status"].hide()
