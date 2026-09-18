@@ -9,7 +9,7 @@ from typing import Any, Dict, List
 
 from app.ai.api_keys import decode_api_key_entries, encode_api_key_entries, first_api_key
 from app.core.data_migration import migrate_legacy_runtime_data
-from app.core.paths import CONFIG_DIR, PROJECT_ROOT, RUNTIME_DIR
+from app.core.paths import API_GROUPS_JSON_PATH, CONFIG_DIR, PROJECT_ROOT, RUNTIME_DIR
 from app.utils.logger import logger
 
 
@@ -131,6 +131,7 @@ class ConfigManager:
         self.default_config_ini_path = str(CONFIG_DIR / "app.defaults.ini")
         self.config_ini_path = str(RUNTIME_DIR / "app.ini")
         self.api_ini_path = str(RUNTIME_DIR / "api.ini")
+        self.api_groups_json_path = str(API_GROUPS_JSON_PATH)
         self.default_prompt_json_path = str(CONFIG_DIR / "prompt.json")
         self.prompt_json_path = str(RUNTIME_DIR / "prompt.json")
         self.history_json_path = str(RUNTIME_DIR / "history.json")
@@ -278,6 +279,7 @@ class ConfigManager:
         api_values: Dict[str, Any],
         api_key_entries: List[Dict[str, str]],
         prompt_values: Dict[str, Any],
+        api_group_contents: str | None = None,
     ) -> None:
         """Persist one complete settings edit, rolling back if any file fails."""
         general_config = copy.deepcopy(self.general_config)
@@ -305,15 +307,32 @@ class ConfigManager:
         runtime_prompt.pop("personality_options", None)
         runtime_prompt.pop("custom_personality_enabled", None)
 
-        write_text_bundle_atomically(
-            {
-                Path(self.config_ini_path): _serialize_ini(general_config),
-                Path(self.api_ini_path): _serialize_ini(api_config),
-                prompt_path: json.dumps(runtime_prompt, ensure_ascii=False, indent=2) + "\n",
-            }
-        )
+        contents = {
+            Path(self.config_ini_path): _serialize_ini(general_config),
+            Path(self.api_ini_path): _serialize_ini(api_config),
+            prompt_path: json.dumps(runtime_prompt, ensure_ascii=False, indent=2) + "\n",
+        }
+        if api_group_contents is not None:
+            contents[Path(self.api_groups_json_path)] = api_group_contents
+        write_text_bundle_atomically(contents)
         self.general_config = general_config
         self.api_config = api_config
+
+    def get_api_group_contents(self) -> str | None:
+        """Missing is distinct from corrupt; never create a group file on reads."""
+        path = Path(self.api_groups_json_path)
+        if not path.exists():
+            return None
+        return path.read_text(encoding="utf-8")
+
+    def save_api_group_contents(self, contents: str) -> None:
+        write_text_bundle_atomically({Path(self.api_groups_json_path): contents})
+
+    def get_legacy_api_values(self) -> Dict[str, str]:
+        """Stored values only, without environment overrides or forgiving key decoding."""
+        if not self.api_config.has_section("API"):
+            return {}
+        return dict(self.api_config.items("API", raw=True))
 
     # JSON Handlers (Prompt, History, Memory)
     def get_prompt(self) -> Dict[str, Any]:

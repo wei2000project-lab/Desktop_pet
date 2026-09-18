@@ -101,9 +101,16 @@ class SettingsService:
         self._validate_range("歷史紀錄上限", snapshot.history_limit, 1, 100)
         self._validate_range("閱讀閒置秒數", snapshot.reading_idle_seconds, 10, 3600)
 
-    def save(self, snapshot: SettingsSnapshot) -> SettingsSnapshot:
+    def save(self, snapshot: SettingsSnapshot, *, api_groups=None) -> SettingsSnapshot:
         normalized = self.normalize(snapshot)
         self.validate(normalized)
+        group_options = {}
+        if api_groups is not None:
+            from app.settings.api_group_service import APIGroupService
+            from app.settings.api_groups import serialize_api_groups
+
+            group_options["api_group_contents"] = serialize_api_groups(api_groups)
+            APIGroupService(self.store, self.publish).load()
         self.store.save_settings_bundle(
             general_values={
                 "Width": normalized.width,
@@ -124,6 +131,7 @@ class SettingsService:
                 "selected_personality": normalized.selected_personality,
                 "custom_personality": normalized.custom_personality,
             },
+            **group_options,
         )
         self.publish("config_updated")
         return normalized

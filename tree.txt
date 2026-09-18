@@ -1,6 +1,7 @@
-Desktop Pet（Git 追蹤檔案；不包含執行期資料）
+Desktop Pet（版本控制檔案；包含本次待提交的新檔，不含執行期資料）
 ├── 過往開發計畫
 │   ├── 架構重構計畫.md
+│   ├── 桌寵重構與介面優化計畫書.md
 │   ├── 桌寵應用程式開啟MVP計畫.md
 │   └── 素材資源改動.md
 ├── app
@@ -48,7 +49,10 @@ Desktop Pet（Git 追蹤檔案；不包含執行期資料）
 │   │   ├── user_message_router.py
 │   │   └── window_manager.py
 │   ├── settings
+│   │   ├── api_group_resolver.py
 │   │   ├── __init__.py
+│   │   ├── api_group_service.py
+│   │   ├── api_groups.py
 │   │   ├── connection_test.py
 │   │   ├── model.py
 │   │   └── service.py
@@ -98,9 +102,11 @@ Desktop Pet（Git 追蹤檔案；不包含執行期資料）
 │       ├── app.defaults.ini
 │       └── prompt.json
 ├── tests
+│   ├── test_api_group_resolver.py
 │   ├── test_ai_client.py
 │   ├── test_animation_asset_paths.py
 │   ├── test_animator_reading_source.py
+│   ├── test_api_groups.py
 │   ├── test_api_keys.py
 │   ├── test_app_aliases.py
 │   ├── test_app_confidence.py
@@ -160,7 +166,7 @@ Desktop Pet（Git 追蹤檔案；不包含執行期資料）
 │   │   └── message_formatting.py
 │   └── __init__.py
 ├── .gitignore
-├── 桌寵重構與介面優化計畫書.md
+├── API 設定系統重構計畫書.md
 ├── main.py
 ├── requirements.txt
 └── tree.txt
