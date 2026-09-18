@@ -8,6 +8,7 @@ from PySide6.QtWidgets import (
 
 from app.settings import ApiKeyEntry, SettingsSnapshot
 from ui.dashboard.number_input import DecimalInput, IntegerInput
+from ui.dashboard.api_group_editor import APIGroupEditor
 
 
 class AIPage(QScrollArea):
@@ -30,6 +31,18 @@ class AIPage(QScrollArea):
         description.setObjectName("dashboardPageDescription")
         description.setWordWrap(True)
         layout.addWidget(description)
+
+        self.group_error_label = QLabel()
+        self.group_error_label.setWordWrap(True)
+        self.group_error_label.setObjectName("dashboardPageDescription")
+        self.group_error_label.hide()
+        layout.addWidget(self.group_error_label)
+        self.group_editor = APIGroupEditor()
+        layout.addWidget(self.group_editor)
+        legacy_notice = QLabel("目前正式聊天及下方連線測試仍使用這份舊設定。上方群組設定尚未接入正式呼叫。")
+        legacy_notice.setWordWrap(True)
+        legacy_notice.setObjectName("dashboardPageDescription")
+        layout.addWidget(legacy_notice)
 
         self.api_key_rows = []
         self._next_row_id = 0

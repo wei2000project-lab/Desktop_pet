@@ -1,4 +1,5 @@
 from dataclasses import replace
+import os
 
 from PySide6.QtWidgets import (
     QHBoxLayout,
@@ -12,6 +13,8 @@ from PySide6.QtWidgets import (
 )
 
 from app.settings import SettingsValidationError, settings_service
+from app.settings import APIGroupService, APIGroupSettings
+from app.settings.api_groups import migrate_legacy_api, validate_api_groups
 from app.utils.logger import logger
 
 from ui.dashboard.page_registry import PageDefinition, default_page_definitions
@@ -32,6 +35,7 @@ class DashboardWindow(QMainWindow):
         parent=None,
         page_definitions: tuple[PageDefinition, ...] | None = None,
         settings_backend=None,
+        group_backend=None,
     ):
         super().__init__(parent)
         self.setObjectName("dashboardWindow")
@@ -43,6 +47,11 @@ class DashboardWindow(QMainWindow):
         self.settings_backend = settings_service if settings_backend is None else settings_backend
         self._original_snapshot = self.settings_backend.load()
         self._draft_snapshot = self._original_snapshot
+        self.group_backend = (APIGroupService(self.settings_backend.store)
+                              if group_backend is None and settings_backend is None else group_backend)
+        self._group_load_error = None
+        self._original_groups = self._read_groups()
+        self._draft_groups = self._original_groups
         self._allow_close = False
         self._page_indexes = {
             definition.key: index
@@ -96,6 +105,7 @@ class DashboardWindow(QMainWindow):
                 self.ai_page = page
                 page.load_snapshot(self._draft_snapshot)
                 page.settings_changed.connect(self._update_ai_settings)
+                page.group_editor.settings_changed.connect(self._update_groups)
             elif definition.key == "personality" and isinstance(page, PersonalityPage):
                 self.personality_page = page
                 page.load_snapshot(self._draft_snapshot)
@@ -104,6 +114,8 @@ class DashboardWindow(QMainWindow):
         self.connection_tests = ConnectionTestController(self)
         if self.ai_page is not None:
             self.ai_page.test_requested.connect(self.connection_tests.start)
+            self.ai_page.group_editor.test_requested.connect(self.connection_tests.start_group)
+            self._load_group_editor()
 
         action_bar = QWidget()
         action_bar.setObjectName("dashboardActionBar")
@@ -152,7 +164,37 @@ class DashboardWindow(QMainWindow):
 
     @property
     def is_dirty(self) -> bool:
-        return self._draft_snapshot != self._original_snapshot
+        return (self._draft_snapshot != self._original_snapshot
+                or self._draft_groups != self._original_groups)
+
+    def _read_groups(self):
+        self._group_load_error = None
+        if self.group_backend is None:
+            return APIGroupSettings()
+        try:
+            existing = self.group_backend.load()
+            if existing is not None:
+                return existing
+            # Preview migration in memory only; cancellation must not create files.
+            return migrate_legacy_api(self.group_backend.store.get_legacy_api_values(),
+                                      bool(os.environ.get("OPENAI_API_KEY", "").strip()))
+        except SettingsValidationError as error:
+            self._group_load_error = str(error)
+            return APIGroupSettings()
+
+    def _load_group_editor(self):
+        if self.ai_page is None:
+            return
+        page = self.ai_page
+        page.group_editor.setVisible(self.group_backend is not None)
+        page.group_editor.setEnabled(self._group_load_error is None)
+        page.group_error_label.setVisible(self._group_load_error is not None)
+        page.group_error_label.setText(self._group_load_error or "")
+        page.group_editor.load_settings(self._draft_groups)
+
+    def _update_groups(self, settings):
+        self._draft_groups = settings
+        self._update_dirty_state()
 
     def _update_always_on_top(self, enabled: bool) -> None:
         self._draft_snapshot = replace(self._draft_snapshot, always_on_top=enabled)
@@ -181,8 +223,15 @@ class DashboardWindow(QMainWindow):
         for page in (self.appearance_page, self.behavior_page, self.ai_page):
             if page is not None:
                 page.commit_pending_input()
+        if self.ai_page is not None and self.group_backend is not None:
+            self.ai_page.group_editor.commit_pending_input()
+        group_changed = self._draft_groups != self._original_groups
         try:
-            saved = self.settings_backend.save(self._draft_snapshot)
+            if group_changed:
+                validate_api_groups(self._draft_groups)
+                saved = self.settings_backend.save(self._draft_snapshot, api_groups=self._draft_groups)
+            else:
+                saved = self.settings_backend.save(self._draft_snapshot)
         except SettingsValidationError as exc:
             QMessageBox.warning(self, "設定內容無效", str(exc))
             return False
@@ -193,7 +242,9 @@ class DashboardWindow(QMainWindow):
 
         self._original_snapshot = saved
         self._draft_snapshot = saved
+        self._original_groups = self._draft_groups
         self._load_pages(saved)
+        self._load_group_editor()
         self._update_dirty_state()
         self.change_status_label.setText("設定已儲存")
         return True
@@ -215,16 +266,22 @@ class DashboardWindow(QMainWindow):
     def load_settings(self) -> None:
         """Reload on reopening, never on recalling a visible draft."""
         snapshot = self.settings_backend.load()
+        groups = self._read_groups()
         self.connection_tests.invalidate()
         self._original_snapshot = snapshot
         self._draft_snapshot = snapshot
+        self._original_groups = groups
+        self._draft_groups = groups
         self._load_pages(snapshot)
+        self._load_group_editor()
         self._allow_close = False
         self._update_dirty_state()
 
     def _restore_original(self) -> None:
         self._draft_snapshot = self._original_snapshot
+        self._draft_groups = self._original_groups
         self._load_pages(self._original_snapshot)
+        self._load_group_editor()
         self._update_dirty_state()
 
     def _confirm_clear_history(self) -> None:
@@ -370,7 +427,7 @@ class DashboardWindow(QMainWindow):
                 spacing: 8px;
             }
             #dashboardSettingsCard QSpinBox, #dashboardSettingsCard QDoubleSpinBox,
-            #dashboardSettingsCard QLineEdit {
+            #dashboardSettingsCard QLineEdit, #dashboardSettingsCard QComboBox {
                 background-color: #ffffff;
                 color: #3f3944;
                 border: 1px solid #cfcad4;

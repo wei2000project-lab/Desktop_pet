@@ -6,7 +6,7 @@ from app.utils.logger import logger
 
 
 class AIClient:
-    def __init__(self, base_url: str, api_key: str, model: str, verify_ssl: bool = True, timeout: float = 120.0):
+    def __init__(self, base_url: str, api_key: str | None, model: str, verify_ssl: bool = True, timeout: float = 120.0):
         self.base_url = base_url.rstrip('/')
         self.api_key = api_key
         self.model = model
@@ -58,11 +58,13 @@ class AIClient:
         return True
 
     def _build_headers(self) -> dict:
-        return {
+        headers = {
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {self.api_key}",
             "Accept": "text/event-stream",
         }
+        if self.api_key is not None:
+            headers["Authorization"] = f"Bearer {self.api_key}"
+        return headers
 
     def _build_payload(self, messages, temperature, max_chars, stream) -> dict:
         return {
