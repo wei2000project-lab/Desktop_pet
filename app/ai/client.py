@@ -2,7 +2,20 @@ import json
 import queue
 import requests
 from typing import Dict, List, Any, Callable
+from app.ai.errors import (
+    AIRequestError, classify_http_response, connection_error, internal_error,
+    invalid_response_error, timeout_error, tls_error, cancelled_error,
+)
 from app.utils.logger import logger
+
+
+_TIMEOUT_EXCEPTIONS = (requests.exceptions.Timeout,)
+_CONNECTION_EXCEPTIONS = (requests.exceptions.ConnectionError,)
+_HTTP_EXCEPTIONS = (requests.exceptions.HTTPError,)
+_ssl_exception = getattr(requests.exceptions, "SSLError", None)
+_SSL_EXCEPTIONS = (_ssl_exception,) if isinstance(_ssl_exception, type) else ()
+_request_exception = getattr(requests.exceptions, "RequestException", None)
+_REQUEST_EXCEPTIONS = (_request_exception,) if isinstance(_request_exception, type) else ()
 
 
 class AIClient:
@@ -26,7 +39,7 @@ class AIClient:
 
     def _raise_if_cancelled(self, should_cancel=None):
         if self._cancelled or (should_cancel and should_cancel()):
-            raise Exception("已停止回覆")
+            raise cancelled_error()
 
     def request_completion(
         self,
@@ -36,13 +49,20 @@ class AIClient:
         on_chunk_cb: Callable[[str], None] = None,
         should_cancel: Callable[[], bool] = None,
     ) -> str:
-        """Request streaming completion. Falls back to non-streaming on error."""
+        """Request a completion, using only explicitly safe stream fallback."""
         try:
             logger.info("Attempting streaming completion (stream=True)")
             return self._request_stream(messages, temperature, max_chars, on_chunk_cb, should_cancel)
-        except Exception as e:
+        except AIRequestError as error:
             self._raise_if_cancelled(should_cancel)
-            logger.warning(f"Streaming failed: {e}. Falling back to non-streaming...")
+            if error.output_started or not error.can_fallback_non_stream:
+                raise
+            logger.warning(
+                "Streaming is explicitly unsupported; retrying once without streaming "
+                "(status=%s, code=%s)",
+                error.http_status,
+                error.service_code,
+            )
             return self._request_non_stream(messages, temperature, max_chars, on_chunk_cb, should_cancel)
 
     def test_connection(self) -> bool:
@@ -130,13 +150,13 @@ class AIClient:
                 try:
                     data_json = json.loads(data_str)
                 except json.JSONDecodeError:
-                    logger.warning(f"JSON parse failed for: {data_str[:80]}")
+                    logger.warning("Ignoring malformed streaming event.")
                     continue
 
                 try:
                     delta = data_json["choices"][0]["delta"]
                 except (KeyError, IndexError):
-                    logger.warning(f"Unexpected structure: {data_json}")
+                    logger.warning("Ignoring unexpected streaming event structure.")
                     continue
 
                 # Only process visible content tokens; skip reasoning/thinking tokens
@@ -150,20 +170,20 @@ class AIClient:
                     self._raise_if_cancelled(should_cancel)
                     on_chunk_cb(chunk_text)
 
-        except requests.exceptions.Timeout:
-            logger.error(f"Request timed out after {self.timeout}s")
-            raise Exception(f"連線逾時（{self.timeout}秒）— 請確認 llama-server 是否仍在執行")
-        except requests.exceptions.ConnectionError as e:
-            logger.error(f"Connection error: {e}")
-            raise Exception(f"無法連線至 {self.base_url}，請確認 URL 與端口是否正確")
-        except requests.exceptions.HTTPError as e:
-            body = ""
-            try:
-                body = e.response.text[:300]
-            except Exception:
-                pass
-            logger.error(f"HTTP {e.response.status_code}: {body}")
-            raise Exception(f"HTTP {e.response.status_code}: {body}")
+        except Exception as error:
+            structured = self._structured_error(
+                error,
+                response=locals().get("response"),
+                output_started=bool(full_text),
+            )
+            logger.error(
+                "AI stream request failed (category=%s, status=%s, code=%s, output_started=%s)",
+                structured.category.value,
+                structured.http_status,
+                structured.service_code,
+                structured.output_started,
+            )
+            raise structured from None
         finally:
             session.close()
             self._active_session = None
@@ -206,17 +226,41 @@ class AIClient:
 
             return content
 
-        except requests.exceptions.Timeout:
-            raise Exception(f"連線逾時（{self.timeout}秒）")
-        except requests.exceptions.ConnectionError as e:
-            raise Exception(f"無法連線至 {self.base_url}")
-        except requests.exceptions.HTTPError as e:
-            body = ""
-            try:
-                body = e.response.text[:300]
-            except Exception:
-                pass
-            raise Exception(f"HTTP {e.response.status_code}: {body}")
+        except Exception as error:
+            structured = self._structured_error(
+                error,
+                response=locals().get("response"),
+                output_started=bool(locals().get("content", "")),
+            )
+            logger.error(
+                "AI non-stream request failed (category=%s, status=%s, code=%s)",
+                structured.category.value,
+                structured.http_status,
+                structured.service_code,
+            )
+            raise structured from None
         finally:
             session.close()
             self._active_session = None
+
+    @staticmethod
+    def _structured_error(error, *, response=None, output_started=False):
+        if isinstance(error, AIRequestError):
+            return error
+        if _SSL_EXCEPTIONS and isinstance(error, _SSL_EXCEPTIONS):
+            return tls_error(output_started=output_started)
+        if isinstance(error, _TIMEOUT_EXCEPTIONS):
+            return timeout_error(output_started=output_started)
+        if isinstance(error, _CONNECTION_EXCEPTIONS):
+            return connection_error(output_started=output_started)
+        if isinstance(error, _HTTP_EXCEPTIONS):
+            error_response = getattr(error, "response", None)
+            return classify_http_response(
+                error_response if error_response is not None else response,
+                output_started=output_started,
+            )
+        if _REQUEST_EXCEPTIONS and isinstance(error, _REQUEST_EXCEPTIONS):
+            return connection_error(output_started=output_started)
+        if isinstance(error, (KeyError, IndexError, TypeError, ValueError, json.JSONDecodeError)):
+            return invalid_response_error(output_started=output_started)
+        return internal_error(output_started=output_started)

@@ -2,14 +2,39 @@ import unittest
 import sys
 import types
 
+
+class StubRequestException(Exception):
+    def __init__(self, message="", response=None):
+        super().__init__(message)
+        self.response = response
+
+
+class StubTimeout(StubRequestException):
+    pass
+
+
+class StubConnectionError(StubRequestException):
+    pass
+
+
+class StubSSLError(StubConnectionError):
+    pass
+
+
+class StubHTTPError(StubRequestException):
+    pass
+
+
 sys.modules.setdefault(
     "requests",
     types.SimpleNamespace(
         Session=None,
         exceptions=types.SimpleNamespace(
-            Timeout=TimeoutError,
-            ConnectionError=ConnectionError,
-            HTTPError=Exception,
+            RequestException=StubRequestException,
+            Timeout=StubTimeout,
+            ConnectionError=StubConnectionError,
+            SSLError=StubSSLError,
+            HTTPError=StubHTTPError,
         ),
     ),
 )

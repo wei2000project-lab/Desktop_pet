@@ -4,10 +4,23 @@ import re
 from PySide6.QtCore import QObject, QRunnable, Signal, Slot
 
 from app.ai.client import AIClient
+from app.ai.errors import AIErrorCategory, AIRequestError
 
 
 def safe_failure_message(error: Exception) -> str:
     # Never forward server bodies, URLs, headers or exception text to the UI/log.
+    if isinstance(error, AIRequestError):
+        messages = {
+            AIErrorCategory.AUTHENTICATION: "驗證失敗，請確認金鑰。",
+            AIErrorCategory.PERMISSION: "存取遭拒，請確認帳號、模型與權限。",
+            AIErrorCategory.RATE_LIMIT: "服務限制請求，請稍後再試。",
+            AIErrorCategory.QUOTA: "服務額度不足，請確認帳號與方案。",
+            AIErrorCategory.MODEL: "模型不存在或目前無法使用。",
+            AIErrorCategory.TIMEOUT: "連線逾時，請確認服務狀態或稍後再試。",
+            AIErrorCategory.TLS: "TLS 憑證驗證失敗，請確認 SSL 設定。",
+            AIErrorCategory.CONNECTION: "無法連線，請確認網址、網路與服務狀態。",
+        }
+        return messages.get(error.category, "連線測試失敗，請確認網址、模型、金鑰及服務狀態。")
     text = str(error)
     match = re.search(r"\bHTTP (\d{3})\b", text)
     if match:
