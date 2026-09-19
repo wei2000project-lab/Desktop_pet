@@ -8,9 +8,11 @@ from app.ai.conversation_memory import build_conversation_context_messages
 from app.ai.provider import AIProvider
 from app.ai.prompt_builder import build_system_prompt
 from app.web.service import WebToolService
+from app.settings import APIGroupService, SettingsValidationError
 
 class ConversationManager:
-    def __init__(self):
+    def __init__(self, group_backend=None):
+        self.group_backend = APIGroupService() if group_backend is None else group_backend
         self.provider = AIProvider()
         self.web_tool = WebToolService()
         self._is_waiting = False  # Prevent concurrent requests
@@ -34,30 +36,18 @@ class ConversationManager:
         # 1. Publish starting signal for UI loading state
         event_bus.publish("ai_message_started")
         
-        # 2. Load API credentials
-        api_key = config_manager.get_active_api_key()
-        base_url = config_manager.get_api("BaseUrl", "https://api.openai.com/v1")
-        model = config_manager.get_api("Model", "gpt-4o-mini")
-        
+        # Resolve once before background preparation; group changes affect new requests only.
         try:
-            temp = float(config_manager.get_api("Temperature", "0.7"))
-            verify_ssl = config_manager.get_api("VerifySSL", "true").lower() == "true"
-        except ValueError:
-            temp = 0.7
-            verify_ssl = True
-        max_chars = 0
-
-        logger.info(f"Handling user message | model={model} | max_chars={max_chars} | url={base_url}")
-
-        # 3. Handle Mock response if API key is empty (keeps Provider clean)
-        if not api_key:
-            logger.info("No API Key found, initiating simulated response")
-            threading.Timer(0.5, self.simulate_mock_response, [user_text, request_id]).start()
+            snapshot = self.group_backend.resolve_runtime_request()
+        except SettingsValidationError as error:
+            self.on_api_error(str(error), request_id)
             return
+        max_chars = 0
 
         threading.Thread(
             target=self.prepare_and_request,
-            args=(user_text, request_id, api_key, base_url, model, temp, max_chars, verify_ssl),
+            args=(user_text, request_id, snapshot.api_key, snapshot.base_url, snapshot.model,
+                  snapshot.temperature, max_chars, snapshot.verify_ssl),
             daemon=True,
             name="ConversationPrepareThread",
         ).start()
@@ -66,7 +56,7 @@ class ConversationManager:
         self,
         user_text: str,
         request_id: int,
-        api_key: str,
+        api_key: str | None,
         base_url: str,
         model: str,
         temp: float,
@@ -181,30 +171,3 @@ class ConversationManager:
         self._is_waiting = False
         logger.error(f"AI response error: {error_msg}")
         event_bus.publish("ai_message_error", error_msg)
-
-    def simulate_mock_response(self, user_text: str, request_id: int = None):
-        if request_id is not None and not self._is_current_request(request_id):
-            return
-        prompt_data = config_manager.get_prompt()
-        name = prompt_data.get("name", "Nova")
-        
-        mock_response = (
-            f"嗨！我是 {name} ✨。我收到了你的訊息：「{user_text}」！\n\n"
-            "目前我正在模擬模式中運作。請在「設定」中填入你的 API Key，我就能真正與你對話囉！"
-        )
-        
-        # Simulate typing chunks
-        chunks = [mock_response[i:i+4] for i in range(0, len(mock_response), 4)]
-        
-        def send_chunk(idx):
-            if request_id is not None and not self._is_current_request(request_id):
-                return
-            if self._cancel_requested:
-                return
-            if idx < len(chunks):
-                event_bus.publish("ai_message_chunk", chunks[idx])
-                threading.Timer(0.04, send_chunk, [idx + 1]).start()
-            else:
-                self.on_api_finished(user_text, mock_response, request_id)
-                
-        send_chunk(0)

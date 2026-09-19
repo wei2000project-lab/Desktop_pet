@@ -1,5 +1,8 @@
-"""Opt-in group persistence/migration; not invoked by startup or the current UI."""
+"""Group persistence and explicit legacy migration for formal requests."""
 import os
+from threading import RLock
+
+api_group_lock = RLock()
 
 from app.core.config_manager import config_manager
 from app.core.event_bus import event_bus
@@ -22,6 +25,10 @@ class APIGroupService:
         return None if contents is None else deserialize_api_groups(contents)
 
     def save(self, settings: APIGroupSettings) -> APIGroupSettings:
+        with api_group_lock:
+            return self._save(settings)
+
+    def _save(self, settings):
         contents = serialize_api_groups(settings)
         self.load()  # Do not silently overwrite corrupt/unsupported existing files.
         try:
@@ -33,6 +40,10 @@ class APIGroupService:
 
     def migrate(self, environment=None) -> APIGroupSettings:
         """Explicit one-time operation; an empty valid file is already migrated."""
+        with api_group_lock:
+            return self._migrate(environment)
+
+    def _migrate(self, environment):
         existing = self.load()
         if existing is not None:
             return existing
@@ -48,4 +59,11 @@ class APIGroupService:
         from app.settings.api_group_resolver import resolve_api_request
 
         return resolve_api_request(self.load(), environment=environment,
+                                   temperature_override=temperature_override)
+
+    def resolve_runtime_request(self, *, environment=None, temperature_override=None):
+        """Migrate only missing files; never resurrect legacy settings after deletion."""
+        from app.settings.api_group_resolver import resolve_api_request
+
+        return resolve_api_request(self.migrate(environment), environment=environment,
                                    temperature_override=temperature_override)

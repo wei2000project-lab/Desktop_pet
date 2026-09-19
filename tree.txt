@@ -104,6 +104,7 @@ Desktop Pet（版本控制檔案；包含本次待提交的新檔，不含執行
 ├── tests
 │   ├── test_dashboard_api_groups.py
 │   ├── test_api_group_resolver.py
+│   ├── test_api_group_runtime.py
 │   ├── test_ai_client.py
 │   ├── test_animation_asset_paths.py
 │   ├── test_animator_reading_source.py

@@ -165,11 +165,37 @@ class DashboardAPIGroupTests(unittest.TestCase):
         self.assertTrue(row["test_button"].isEnabled())
         self.assertNotIn("private", row["test_status"].text())
 
-    def test_old_settings_only_do_not_create_group_file(self):
+    def test_hidden_old_settings_do_not_change_legacy_data(self):
         self.window.ai_page.model_input.setText("new-old-model")
         self.assertTrue(self.window.apply_changes())
         self.assertFalse(self.path.exists())
-        self.assertEqual(self.store.get_api("Model"), "new-old-model")
+        self.assertEqual(self.store.get_api("Model"), "old-model")
+        self.assertFalse(self.window.is_dirty)
+
+    def test_formal_group_ui_hides_legacy_cards_and_keeps_memory(self):
+        self.assertTrue(self.window.ai_page._group_mode)
+        self.assertTrue(all(card.isHidden() for card in self.window.ai_page._legacy_cards))
+        self.window.ai_page.max_memory_turns_input.setValue(3)
+        self.assertTrue(self.window.apply_changes())
+        self.assertEqual(self.store.get_general_int("MaxMemoryTurns"), 3)
+        self.assertFalse(self.path.exists())
+
+    def test_group_apply_preserves_legacy_file_bytes(self):
+        legacy = Path(self.store.api_ini_path)
+        original = b"[API]\nModel=original-preserved\nApiKey=synthetic-original-key\n"
+        # Test fixture only; create the original file through the production atomic writer.
+        from app.core.config_manager import write_text_bundle_atomically
+        write_text_bundle_atomically({legacy: original.decode()})
+        self.editor.group_rows[0]["name"].setText("修改群組")
+        self.assertTrue(self.window.apply_changes())
+        self.assertEqual(legacy.read_bytes(), original)
+
+    def test_invalid_hidden_legacy_fields_do_not_block_group_save(self):
+        self.store.api_config.set("API", "BaseUrl", "")
+        self.store.api_config.set("API", "Model", "")
+        self.window._draft_snapshot = replace(self.window._draft_snapshot, base_url="", model="")
+        self.editor.group_rows[0]["name"].setText("有效群組")
+        self.assertTrue(self.window.apply_changes())
 
     def test_rename_preserves_group_and_key_ids(self):
         row = self.editor.group_rows[0]

@@ -84,7 +84,17 @@ class SettingsService:
             selected_personality=selected_personality,
         )
 
-    def validate(self, snapshot: SettingsSnapshot) -> None:
+    def validate(self, snapshot: SettingsSnapshot, *, include_legacy_api=True) -> None:
+        if include_legacy_api:
+            self._validate_legacy_api(snapshot)
+
+        self._validate_range("桌寬", snapshot.width, 100, 1000)
+        self._validate_range("桌高", snapshot.height, 100, 1000)
+        self._validate_range("最大記憶輪數", snapshot.max_memory_turns, 0, 50)
+        self._validate_range("歷史紀錄上限", snapshot.history_limit, 1, 100)
+        self._validate_range("閱讀閒置秒數", snapshot.reading_idle_seconds, 10, 3600)
+
+    def _validate_legacy_api(self, snapshot):
         if not snapshot.base_url:
             raise SettingsValidationError("Base URL 不可留空。")
         parsed_url = urlsplit(snapshot.base_url)
@@ -95,16 +105,18 @@ class SettingsService:
         if not math.isfinite(snapshot.temperature) or not 0.0 <= snapshot.temperature <= 2.0:
             raise SettingsValidationError("Temperature 必須介於 0.0 到 2.0。")
 
-        self._validate_range("桌寬", snapshot.width, 100, 1000)
-        self._validate_range("桌高", snapshot.height, 100, 1000)
-        self._validate_range("最大記憶輪數", snapshot.max_memory_turns, 0, 50)
-        self._validate_range("歷史紀錄上限", snapshot.history_limit, 1, 100)
-        self._validate_range("閱讀閒置秒數", snapshot.reading_idle_seconds, 10, 3600)
+    def save(self, snapshot: SettingsSnapshot, *, api_groups=None, group_settings_mode=False) -> SettingsSnapshot:
+        from app.settings.api_group_service import api_group_lock
 
-    def save(self, snapshot: SettingsSnapshot, *, api_groups=None) -> SettingsSnapshot:
+        with api_group_lock:
+            return self._save(snapshot, api_groups=api_groups, group_settings_mode=group_settings_mode)
+
+    def _save(self, snapshot, *, api_groups=None, group_settings_mode=False):
         normalized = self.normalize(snapshot)
-        self.validate(normalized)
+        self.validate(normalized, include_legacy_api=not group_settings_mode)
         group_options = {}
+        if group_settings_mode:
+            group_options["preserve_legacy_api"] = True
         if api_groups is not None:
             from app.settings.api_group_service import APIGroupService
             from app.settings.api_groups import serialize_api_groups
@@ -121,7 +133,7 @@ class SettingsService:
                 "HistoryLimit": normalized.history_limit,
                 "ReadingIdleSeconds": normalized.reading_idle_seconds,
             },
-            api_values={
+            api_values={} if group_settings_mode else {
                 "BaseUrl": normalized.base_url,
                 "Model": normalized.model,
                 "Temperature": f"{normalized.temperature:.1f}",

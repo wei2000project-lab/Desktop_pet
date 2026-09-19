@@ -17,6 +17,8 @@ class AIPage(QScrollArea):
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        self._group_mode = False
+        self._legacy_cards = []
         self.setWidgetResizable(True)
         self.setFrameShape(QScrollArea.NoFrame)
         content = QWidget()
@@ -43,11 +45,13 @@ class AIPage(QScrollArea):
         legacy_notice.setWordWrap(True)
         legacy_notice.setObjectName("dashboardPageDescription")
         layout.addWidget(legacy_notice)
+        self._legacy_notice = legacy_notice
 
         self.api_key_rows = []
         self._next_row_id = 0
         self._loading = False
         key_form = self._card(layout, "API Keys")
+        self._legacy_cards.append(key_form.parentWidget())
         self.api_keys_container = QWidget()
         self.api_keys_layout = QVBoxLayout(self.api_keys_container)
         self.api_keys_layout.setContentsMargins(0, 0, 0, 0)
@@ -61,6 +65,7 @@ class AIPage(QScrollArea):
         key_form.addRow(key_note)
 
         model_form = self._card(layout, "模型設定")
+        self._legacy_cards.append(model_form.parentWidget())
         self.base_url_input = QLineEdit()
         self.base_url_input.setPlaceholderText("https://api.openai.com/v1")
         self.model_input = QLineEdit()
@@ -122,7 +127,7 @@ class AIPage(QScrollArea):
     def _emit_settings(self, _value) -> None:
         if self._loading:
             return
-        self.settings_changed.emit({
+        values = {
             "api_keys": self.collect_api_key_entries(),
             "base_url": self.base_url_input.text(),
             "model": self.model_input.text(),
@@ -130,7 +135,17 @@ class AIPage(QScrollArea):
             "max_memory_turns": self.max_memory_turns_input.value(),
             "history_limit": self.history_limit_input.value(),
             "conversation_summary_enabled": self.conversation_summary_check.isChecked(),
-        })
+        }
+        if self._group_mode:
+            for field in ("api_keys", "base_url", "model", "temperature"):
+                values.pop(field)
+        self.settings_changed.emit(values)
+
+    def set_group_mode(self, enabled):
+        self._group_mode = enabled
+        self._legacy_notice.setVisible(not enabled)
+        for card in self._legacy_cards:
+            card.setVisible(not enabled)
 
     def commit_pending_input(self) -> None:
         for control in (self.temperature_input, self.max_memory_turns_input,

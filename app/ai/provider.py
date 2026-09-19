@@ -23,7 +23,7 @@ class AIProvider:
         self,
         messages: List[Dict[str, str]],
         api_url: str,
-        api_key: str,
+        api_key: str | None,
         model: str,
         temperature: float,
         max_chars: int,
@@ -44,13 +44,16 @@ class AIProvider:
                     "The new request will be queued but the old one may still respond."
                 )
 
-        self._cancel_event.clear()
+        # Each request owns its cancellation token; a new request must not revive an old one.
+        cancel_event = Event()
+        with self._lock:
+            self._cancel_event = cancel_event
 
         t = threading.Thread(
             target=self._run_request,
             args=(
                 messages, api_url, api_key, model, temperature,
-                max_chars, verify_ssl, on_chunk_cb, on_finished_cb, on_error_cb
+                max_chars, verify_ssl, on_chunk_cb, on_finished_cb, on_error_cb, cancel_event
             ),
             daemon=True,
             name="AIRequestThread"
@@ -66,16 +69,21 @@ class AIProvider:
         self,
         messages: List[Dict[str, str]],
         api_url: str,
-        api_key: str,
+        api_key: str | None,
         model: str,
         temperature: float,
         max_chars: int,
         verify_ssl: bool,
         on_chunk_cb: Callable[[str], None],
         on_finished_cb: Callable[[str], None],
-        on_error_cb: Callable[[str], None]
+        on_error_cb: Callable[[str], None],
+        cancel_event=None,
     ):
+        cancel_event = self._cancel_event if cancel_event is None else cancel_event
+        client = None
         try:
+            if cancel_event.is_set():
+                return
             logger.info(f"Request to: {api_url} | model: {model} | max_chars: {max_chars}")
             client = AIClient(
                 base_url=api_url,
@@ -85,25 +93,27 @@ class AIProvider:
                 timeout=120.0
             )
             with self._lock:
-                self._active_client = client
+                if cancel_event is self._cancel_event:
+                    self._active_client = client
             full_response = client.request_completion(
                 messages=messages,
                 temperature=temperature,
                 max_chars=max_chars,
                 on_chunk_cb=on_chunk_cb,
-                should_cancel=self._cancel_event.is_set,
+                should_cancel=cancel_event.is_set,
             )
-            if self._cancel_event.is_set():
+            if cancel_event.is_set():
                 logger.info("AI request cancelled before finish callback.")
                 return
             logger.info(f"Request finished. Response length: {len(full_response)} chars")
             on_finished_cb(full_response)
         except Exception as e:
-            if self._cancel_event.is_set():
+            if cancel_event.is_set():
                 logger.info(f"AI request cancelled: {e}")
                 return
             logger.error(f"AIProvider request error: {e}", exc_info=True)
             on_error_cb(str(e))
         finally:
             with self._lock:
-                self._active_client = None
+                if self._active_client is client:
+                    self._active_client = None

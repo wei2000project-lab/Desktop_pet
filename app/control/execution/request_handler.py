@@ -244,21 +244,18 @@ class AppOpenRequestHandler:
 
 def _complete_with_ai_client(messages):
     from app.ai.client import AIClient
-    from app.core.config_manager import config_manager
+    from app.settings import APIGroupService
 
-    api_key = config_manager.get_active_api_key()
-    if not api_key:
-        raise RuntimeError("尚未設定 API Key")
+    snapshot = APIGroupService().resolve_runtime_request()
 
     client = AIClient(
-        base_url=config_manager.get_api("BaseUrl", "https://api.openai.com/v1"),
-        api_key=api_key,
-        model=config_manager.get_api("Model", "gpt-4o-mini"),
-        verify_ssl=config_manager.get_api("VerifySSL", "true").lower() == "true",
+        base_url=snapshot.base_url,
+        api_key=snapshot.api_key,
+        model=snapshot.model,
+        verify_ssl=snapshot.verify_ssl,
         timeout=60.0,
     )
-    temperature = float(config_manager.get_api("Temperature", "0.2"))
-    return client.request_completion(messages=messages, temperature=temperature, max_chars=800)
+    return client.request_completion(messages=messages, temperature=snapshot.temperature, max_chars=800)
 
 
 def _selection_error_message(error: str) -> str:

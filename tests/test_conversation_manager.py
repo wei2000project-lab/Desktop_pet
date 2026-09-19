@@ -1,6 +1,9 @@
 import unittest
 import sys
 import types
+from unittest.mock import Mock, patch
+from tests.test_api_groups import sample_settings
+from app.settings.api_group_resolver import resolve_api_request
 
 
 class FakeSignal:
@@ -93,11 +96,15 @@ class ConversationManagerTests(unittest.TestCase):
         original_config = conversation_manager_module.config_manager
         conversation_manager_module.config_manager = FakeConfigManager()
         try:
-            manager = ConversationManager()
+            groups = Mock()
+            groups.resolve_runtime_request.return_value = resolve_api_request(sample_settings())
+            manager = ConversationManager(group_backend=groups)
             provider = FakeProvider()
             manager.provider = provider
 
-            manager.handle_user_message("新的問題")
+            with patch.object(conversation_manager_module.threading, "Thread") as thread:
+                thread.side_effect = lambda *, target, args, **kwargs: types.SimpleNamespace(start=lambda: target(*args))
+                manager.handle_user_message("新的問題")
         finally:
             conversation_manager_module.config_manager = original_config
 

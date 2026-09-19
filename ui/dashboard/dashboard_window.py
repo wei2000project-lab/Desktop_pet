@@ -186,6 +186,7 @@ class DashboardWindow(QMainWindow):
         if self.ai_page is None:
             return
         page = self.ai_page
+        page.set_group_mode(self.group_backend is not None)
         page.group_editor.setVisible(self.group_backend is not None)
         page.group_editor.setEnabled(self._group_load_error is None)
         page.group_error_label.setVisible(self._group_load_error is not None)
@@ -229,9 +230,11 @@ class DashboardWindow(QMainWindow):
         try:
             if group_changed:
                 validate_api_groups(self._draft_groups)
-                saved = self.settings_backend.save(self._draft_snapshot, api_groups=self._draft_groups)
+                saved = self.settings_backend.save(self._draft_snapshot, api_groups=self._draft_groups,
+                                                   group_settings_mode=True)
             else:
-                saved = self.settings_backend.save(self._draft_snapshot)
+                options = {"group_settings_mode": True} if self.group_backend is not None else {}
+                saved = self.settings_backend.save(self._draft_snapshot, **options)
         except SettingsValidationError as exc:
             QMessageBox.warning(self, "設定內容無效", str(exc))
             return False

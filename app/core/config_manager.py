@@ -280,6 +280,7 @@ class ConfigManager:
         api_key_entries: List[Dict[str, str]],
         prompt_values: Dict[str, Any],
         api_group_contents: str | None = None,
+        preserve_legacy_api: bool = False,
     ) -> None:
         """Persist one complete settings edit, rolling back if any file fails."""
         general_config = copy.deepcopy(self.general_config)
@@ -293,8 +294,9 @@ class ConfigManager:
             general_config.set("General", key, str(value))
         for key, value in api_values.items():
             api_config.set("API", key, str(value))
-        api_config.set("API", "ApiKeys", encode_api_key_entries(api_key_entries))
-        api_config.set("API", "ApiKey", first_api_key(api_key_entries))
+        if not preserve_legacy_api:
+            api_config.set("API", "ApiKeys", encode_api_key_entries(api_key_entries))
+            api_config.set("API", "ApiKey", first_api_key(api_key_entries))
 
         runtime_prompt: Dict[str, Any] = {}
         prompt_path = Path(self.prompt_json_path)
@@ -309,9 +311,10 @@ class ConfigManager:
 
         contents = {
             Path(self.config_ini_path): _serialize_ini(general_config),
-            Path(self.api_ini_path): _serialize_ini(api_config),
             prompt_path: json.dumps(runtime_prompt, ensure_ascii=False, indent=2) + "\n",
         }
+        if not preserve_legacy_api:
+            contents[Path(self.api_ini_path)] = _serialize_ini(api_config)
         if api_group_contents is not None:
             contents[Path(self.api_groups_json_path)] = api_group_contents
         write_text_bundle_atomically(contents)

@@ -27,7 +27,7 @@ class APIGroupEditor(QWidget):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(14)
-        notice = QLabel("群組設定預覽：正式聊天仍使用下方舊設定。連線測試使用草稿、不自動儲存，會發送請求並可能消耗額度。X 金鑰仍可手動測試。")
+        notice = QLabel("正式請求使用已儲存的目前群組；修改後請按套用。連線測試使用草稿、不自動儲存，會發送請求並可能消耗額度。X 金鑰仍可手動測試。")
         notice.setObjectName("dashboardPlaceholderStatus")
         notice.setWordWrap(True)
         layout.addWidget(notice)
@@ -331,4 +331,4 @@ class APIGroupEditor(QWidget):
             status = "目前群組已具備發送所需設定（尚未測試連線）。"
         except APIGroupResolutionError as error:
             status = str(error)
-        self.state_label.setText(status + " 此階段仍未用於正式聊天。")
+        self.state_label.setText(status + " 草稿修改套用後才會影響新請求。")

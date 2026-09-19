@@ -24,7 +24,7 @@ class WebToolService:
         self,
         user_text: str,
         api_url: str,
-        api_key: str,
+        api_key: str | None,
         model: str,
         verify_ssl: bool,
         should_cancel: Callable[[], bool] = None,
@@ -67,8 +67,8 @@ class WebToolService:
         context = self.context_builder.build(records)
         return context or self._failure_context()
 
-    def _decide(self, user_text: str, api_url: str, api_key: str, model: str, verify_ssl: bool, should_cancel):
-        if not api_key:
+    def _decide(self, user_text: str, api_url: str, api_key: str | None, model: str, verify_ssl: bool, should_cancel):
+        if api_key == "":
             return self.decider.fallback_decision(user_text)
         try:
             from app.ai.client import AIClient
