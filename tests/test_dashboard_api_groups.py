@@ -300,13 +300,28 @@ class DashboardAPIGroupTests(unittest.TestCase):
         key = row["keys"][0]
         self.editor._update_responsive_layout(800)
         self.assertEqual(self.editor.master_detail_layout.direction(), QBoxLayout.LeftToRight)
-        wide_source_row = key["layout"].getItemPosition(key["layout"].indexOf(key["source"]))[0]
+        wide_key_row = key["layout"].getItemPosition(key["layout"].indexOf(key["key_widget"]))[0]
         self.editor._update_responsive_layout(520)
         self.assertEqual(self.editor.master_detail_layout.direction(), QBoxLayout.TopToBottom)
-        narrow_source_row = key["layout"].getItemPosition(key["layout"].indexOf(key["source"]))[0]
-        self.assertEqual(wide_source_row, 0)
-        self.assertEqual(narrow_source_row, 1)
+        narrow_key_row = key["layout"].getItemPosition(key["layout"].indexOf(key["key_widget"]))[0]
+        self.assertEqual(wide_key_row, 1)
+        self.assertEqual(narrow_key_row, 2)
         self.assertEqual(self.editor.group_list_pane.maximumWidth(), 16777215)
+
+    def test_key_source_is_hidden_in_more_settings_without_dirtying(self):
+        key = self.editor.group_rows[0]["keys"][0]
+        self.assertTrue(key["extra_body"].isHidden())
+        self.assertTrue(key["source_badge"].isHidden())
+        key["more_settings_action"].setChecked(True)
+        self.assertFalse(key["extra_body"].isHidden())
+        self.assertIn("隱藏", key["more_settings_action"].text())
+        key["more_settings_action"].setChecked(False)
+        self.assertTrue(key["extra_body"].isHidden())
+        self.assertFalse(self.window.is_dirty)
+
+        key["source"].setCurrentIndex(1)
+        self.assertFalse(key["source_badge"].isHidden())
+        self.assertEqual(key["source_badge"].text(), "環境變數")
 
     def test_dashboard_window_drives_wide_and_narrow_api_layouts(self):
         self.window.select_page("ai")
@@ -317,6 +332,7 @@ class DashboardAPIGroupTests(unittest.TestCase):
         self.window.resize(650, 600)
         self.app.processEvents()
         self.assertEqual(self.editor.master_detail_layout.direction(), QBoxLayout.TopToBottom)
+        self.assertEqual(self.window.ai_page.horizontalScrollBar().maximum(), 0)
 
     def test_priority_and_x_keep_previous_priority(self):
         key = self.editor.group_rows[0]["keys"][0]

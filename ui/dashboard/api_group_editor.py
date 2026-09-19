@@ -305,6 +305,8 @@ class APIGroupEditor(QWidget):
         source.addItem("儲存金鑰", "stored")
         source.addItem("環境變數 OPENAI_API_KEY", "environment")
         source.setCurrentIndex(source.findData(entry.source))
+        source_badge = QLabel("環境變數")
+        source_badge.setObjectName("dashboardStatusBadge")
         key = QLineEdit(entry.key)
         key.setEchoMode(QLineEdit.Password)
         key.setAccessibleName("群組 API Key")
@@ -320,6 +322,12 @@ class APIGroupEditor(QWidget):
         priority.setSingleStep(1)
         priority.setValue(entry.priority)
         priority.setAccessibleName("Key 優先順位")
+        priority_widget = QWidget()
+        priority_fields = QHBoxLayout(priority_widget)
+        priority_fields.setContentsMargins(0, 0, 0, 0)
+        priority_fields.setSpacing(6)
+        priority_fields.addWidget(QLabel("順位"))
+        priority_fields.addWidget(priority)
         enabled = NoWheelCheckBox("啟用（取消即 X）")
         enabled.setChecked(entry.enabled)
         more = QPushButton("⋯")
@@ -327,12 +335,15 @@ class APIGroupEditor(QWidget):
         more.setToolTip("其他操作")
         more.setFixedWidth(42)
         menu = QMenu(more)
+        more_settings_action = menu.addAction("顯示更多設定")
+        more_settings_action.setCheckable(True)
+        menu.addSeparator()
         delete_action = menu.addAction("刪除 Key")
         more.setMenu(menu)
         status = QLabel()
         status.setObjectName("dashboardPageDescription")
         status.setWordWrap(True)
-        test_button = QPushButton("測試此 Key")
+        test_button = QPushButton("測試")
         test_status = QLabel()
         test_status.setTextFormat(Qt.PlainText)
         test_status.setWordWrap(True)
@@ -342,11 +353,20 @@ class APIGroupEditor(QWidget):
         actions.setContentsMargins(0, 0, 0, 0)
         actions.addWidget(test_button)
         actions.addWidget(more)
+        extra_body = QWidget()
+        extra_layout = QFormLayout(extra_body)
+        extra_layout.setContentsMargins(0, 4, 0, 0)
+        extra_layout.setSpacing(8)
+        extra_layout.addRow("金鑰來源：", source)
+        extra_layout.addRow("", status)
+        extra_body.hide()
         row = {"id": entry.id, "container": container, "name": name, "source": source,
                "key": key, "show": show, "priority": priority, "enabled": enabled, "status": status,
                "more": more, "delete_action": delete_action, "layout": layout,
-               "key_widget": key_widget, "actions_widget": actions_widget,
-               "test_status": test_status}
+               "key_widget": key_widget, "priority_widget": priority_widget,
+               "actions_widget": actions_widget,
+               "test_status": test_status, "source_badge": source_badge,
+               "more_settings_action": more_settings_action, "extra_body": extra_body}
         group["keys"].append(row)
         row.update(test_button=test_button, test_status=test_status, testing=False)
         test_button.clicked.connect(lambda: self.test_requested.emit(group_id, entry.id))
@@ -360,6 +380,7 @@ class APIGroupEditor(QWidget):
             if not is_stored:
                 show.setChecked(False)
             available = bool(os.environ.get("OPENAI_API_KEY", "").strip()) if not is_stored else False
+            source_badge.setVisible(not is_stored)
             status.setText(("環境來源已設定（不顯示或保存內容）" if available else "環境來源尚無值") if not is_stored
                            else ("啟用" if enabled.isChecked() else "X：已暫停，原順位保留"))
             self._changed()
@@ -369,6 +390,9 @@ class APIGroupEditor(QWidget):
             show.setText("隱藏" if checked else "顯示")
 
         show.toggled.connect(reveal)
+        more_settings_action.toggled.connect(
+            lambda checked: self._set_key_details_visible(row, checked)
+        )
         for control in (name, key):
             control.textChanged.connect(self._changed)
         priority.valueChanged.connect(self._changed)
@@ -377,6 +401,13 @@ class APIGroupEditor(QWidget):
         delete_action.triggered.connect(lambda: self.remove_key(group_id, entry.id))
         update_source()
         return row
+
+    @staticmethod
+    def _set_key_details_visible(row, visible):
+        row["extra_body"].setVisible(visible)
+        row["more_settings_action"].setText(
+            "隱藏更多設定" if visible else "顯示更多設定"
+        )
 
     def remove_key(self, group_id, key_id):
         group = self.group_for_id(group_id)
@@ -477,22 +508,22 @@ class APIGroupEditor(QWidget):
         while layout.count():
             layout.takeAt(0)
         if narrow:
-            for line, widget in enumerate((row["name"], row["source"], row["key_widget"],
-                                           row["priority"], row["enabled"], row["actions_widget"],
-                                           row["status"], row["test_status"])):
+            for line, widget in enumerate((row["name"], row["source_badge"], row["key_widget"],
+                                           row["priority_widget"], row["enabled"], row["actions_widget"],
+                                           row["extra_body"], row["test_status"])):
                 layout.addWidget(widget, line, 0)
             layout.setColumnStretch(0, 1)
             layout.setColumnStretch(1, 0)
             layout.setColumnStretch(2, 0)
         else:
             layout.addWidget(row["name"], 0, 0)
-            layout.addWidget(row["source"], 0, 1)
+            layout.addWidget(row["source_badge"], 0, 1)
             layout.addWidget(row["enabled"], 0, 2)
             layout.addWidget(row["key_widget"], 1, 0, 1, 2)
-            layout.addWidget(row["priority"], 1, 2)
-            layout.addWidget(row["status"], 2, 0, 1, 2)
+            layout.addWidget(row["priority_widget"], 1, 2)
             layout.addWidget(row["actions_widget"], 2, 2)
-            layout.addWidget(row["test_status"], 3, 0, 1, 3)
+            layout.addWidget(row["extra_body"], 3, 0, 1, 3)
+            layout.addWidget(row["test_status"], 4, 0, 1, 3)
             layout.setColumnStretch(0, 2)
             layout.setColumnStretch(1, 2)
             layout.setColumnStretch(2, 1)
