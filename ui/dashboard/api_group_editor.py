@@ -6,7 +6,7 @@ from urllib.parse import urlsplit
 from PySide6.QtCore import Signal, Qt
 from PySide6.QtWidgets import (
     QBoxLayout, QFormLayout, QGridLayout, QHBoxLayout, QLabel, QLineEdit, QMenu,
-    QMessageBox, QPushButton, QStackedWidget, QVBoxLayout, QWidget, QSizePolicy,
+    QPushButton, QStackedWidget, QVBoxLayout, QWidget, QSizePolicy,
 )
 
 from app.settings.api_groups import APIGroup, APIGroupKey, APIGroupSettings
@@ -14,6 +14,7 @@ from app.settings.api_group_resolver import APIGroupResolutionError, resolve_api
 from app.settings.model import SettingsValidationError
 from ui.dashboard.number_input import DecimalInput
 from ui.dashboard.input_controls import NoWheelCheckBox, NoWheelComboBox, ToggleSwitch
+from ui.dashboard.dialogs import DashboardDialog
 
 
 class APIGroupEditor(QWidget):
@@ -443,8 +444,9 @@ class APIGroupEditor(QWidget):
         message = "確定刪除此群組及其金鑰嗎？"
         if active:
             message += "目前群組將變為未設定，請再選擇替代群組。"
-        if QMessageBox.question(self, "刪除 API 群組", message,
-                               QMessageBox.Yes | QMessageBox.No, QMessageBox.No) == QMessageBox.Yes:
+        if DashboardDialog.question(self, "刪除 API 群組", message,
+                                    DashboardDialog.Yes | DashboardDialog.No,
+                                    DashboardDialog.No) == DashboardDialog.Yes:
             self.remove_group(group_id)
 
     def remove_group(self, group_id):

@@ -94,7 +94,7 @@ class DashboardEntryTests(unittest.TestCase):
     def test_discard_then_reopen_is_clean(self):
         self.open_settings()
         self.window.ai_page.model_input.setText("draft")
-        with patch("ui.dashboard.dashboard_window.QMessageBox.question",
+        with patch("ui.dashboard.dashboard_window.DashboardDialog.question",
                    return_value=QMessageBox.StandardButton.Discard):
             self.window.close()
         self.open_settings()

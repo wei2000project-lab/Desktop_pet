@@ -141,7 +141,7 @@ class DashboardApiKeyTests(unittest.TestCase):
         row = self.key_row()
         row["test_button"].click()
         event = QCloseEvent()
-        with patch("ui.dashboard.dashboard_window.QMessageBox.question",
+        with patch("ui.dashboard.dashboard_window.DashboardDialog.question",
                    return_value=QMessageBox.StandardButton.Discard):
             self.window.closeEvent(event)
         self.assertTrue(event.isAccepted())
@@ -152,7 +152,7 @@ class DashboardApiKeyTests(unittest.TestCase):
         row = self.key_row()
         row["test_button"].click()
         event = QCloseEvent()
-        with patch("ui.dashboard.dashboard_window.QMessageBox.question",
+        with patch("ui.dashboard.dashboard_window.DashboardDialog.question",
                    return_value=QMessageBox.StandardButton.Cancel):
             self.window.closeEvent(event)
         self.assertFalse(event.isAccepted())

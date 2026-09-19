@@ -164,10 +164,10 @@ class DashboardShellTests(unittest.TestCase):
     def test_clear_history_requires_confirmation(self):
         with (
             patch(
-                "ui.dashboard.dashboard_window.QMessageBox.question",
+                "ui.dashboard.dashboard_window.DashboardDialog.question",
                 return_value=QMessageBox.StandardButton.Yes,
             ),
-            patch("ui.dashboard.dashboard_window.QMessageBox.information"),
+            patch("ui.dashboard.dashboard_window.DashboardDialog.information"),
         ):
             self.window.general_page.clear_history_button.click()
 
@@ -223,7 +223,7 @@ class DashboardShellTests(unittest.TestCase):
         self.window.appearance_page.width_input.setValue(500)
         with (
             patch.object(self.settings, "save", side_effect=SettingsValidationError("無效尺寸")),
-            patch("ui.dashboard.dashboard_window.QMessageBox.warning"),
+            patch("ui.dashboard.dashboard_window.DashboardDialog.warning"),
         ):
             self.assertFalse(self.window.apply_changes())
         self.assertTrue(self.window.is_dirty)
@@ -232,7 +232,7 @@ class DashboardShellTests(unittest.TestCase):
     def test_discarding_close_restores_size(self):
         self.window.appearance_page.width_input.setValue(500)
         event = QCloseEvent()
-        with patch("ui.dashboard.dashboard_window.QMessageBox.question",
+        with patch("ui.dashboard.dashboard_window.DashboardDialog.question",
                    return_value=QMessageBox.StandardButton.Discard):
             self.window.closeEvent(event)
         self.assertTrue(event.isAccepted())
@@ -244,7 +244,7 @@ class DashboardShellTests(unittest.TestCase):
         self.window.general_page.always_on_top_check.setChecked(True)
         event = QCloseEvent()
         with patch(
-            "ui.dashboard.dashboard_window.QMessageBox.question",
+            "ui.dashboard.dashboard_window.DashboardDialog.question",
             return_value=QMessageBox.StandardButton.Discard,
         ):
             self.window.closeEvent(event)
@@ -305,7 +305,7 @@ class DashboardShellTests(unittest.TestCase):
         control.setValue(120)
         with (
             patch.object(self.settings, "save", side_effect=SettingsValidationError("無效秒數")),
-            patch("ui.dashboard.dashboard_window.QMessageBox.warning"),
+            patch("ui.dashboard.dashboard_window.DashboardDialog.warning"),
         ):
             self.assertFalse(self.window.apply_changes())
         self.assertEqual(control.value(), 120)
@@ -315,7 +315,7 @@ class DashboardShellTests(unittest.TestCase):
     def test_dirty_behavior_close_cancel_preserves_draft(self):
         self.window.behavior_page.reading_idle_seconds_input.setValue(120)
         event = QCloseEvent()
-        with patch("ui.dashboard.dashboard_window.QMessageBox.question",
+        with patch("ui.dashboard.dashboard_window.DashboardDialog.question",
                    return_value=QMessageBox.StandardButton.Cancel):
             self.window.closeEvent(event)
         self.assertFalse(event.isAccepted())
@@ -325,7 +325,7 @@ class DashboardShellTests(unittest.TestCase):
         control = self.window.behavior_page.reading_idle_seconds_input
         control.setValue(120)
         event = QCloseEvent()
-        with patch("ui.dashboard.dashboard_window.QMessageBox.question",
+        with patch("ui.dashboard.dashboard_window.DashboardDialog.question",
                    return_value=QMessageBox.StandardButton.Discard):
             self.window.closeEvent(event)
         self.assertTrue(event.isAccepted())
@@ -336,7 +336,7 @@ class DashboardShellTests(unittest.TestCase):
     def test_dirty_behavior_close_save_persists_value(self):
         self.window.behavior_page.reading_idle_seconds_input.setValue(120)
         event = QCloseEvent()
-        with patch("ui.dashboard.dashboard_window.QMessageBox.question",
+        with patch("ui.dashboard.dashboard_window.DashboardDialog.question",
                    return_value=QMessageBox.StandardButton.Save):
             self.window.closeEvent(event)
         self.assertTrue(event.isAccepted())
@@ -411,7 +411,7 @@ class DashboardShellTests(unittest.TestCase):
             with self.subTest(field=field, value=value):
                 self.window._restore_original()
                 getattr(self.window.ai_page, field).setText(value)
-                with patch("ui.dashboard.dashboard_window.QMessageBox.warning") as warning:
+                with patch("ui.dashboard.dashboard_window.DashboardDialog.warning") as warning:
                     self.assertFalse(self.window.apply_changes())
                     warning.assert_called_once()
                 self.assertTrue(self.window.is_dirty)
@@ -440,9 +440,9 @@ class DashboardShellTests(unittest.TestCase):
         self.window.ai_page.model_input.setText("")
         event = QCloseEvent()
         with (
-            patch("ui.dashboard.dashboard_window.QMessageBox.question",
+            patch("ui.dashboard.dashboard_window.DashboardDialog.question",
                   return_value=QMessageBox.StandardButton.Save),
-            patch("ui.dashboard.dashboard_window.QMessageBox.warning"),
+            patch("ui.dashboard.dashboard_window.DashboardDialog.warning"),
         ):
             self.window.closeEvent(event)
         self.assertFalse(event.isAccepted())

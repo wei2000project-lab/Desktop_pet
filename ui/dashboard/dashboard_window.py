@@ -5,10 +5,10 @@ from PySide6.QtCore import QEvent
 from PySide6.QtWidgets import (
     QApplication,
     QAbstractScrollArea,
+    QAbstractSpinBox,
     QHBoxLayout,
     QLabel,
     QMainWindow,
-    QMessageBox,
     QPushButton,
     QStackedWidget,
     QVBoxLayout,
@@ -24,7 +24,8 @@ from ui.dashboard.page_registry import PageDefinition, default_page_definitions
 from ui.dashboard.pages import AIPage, AppearancePage, BehaviorPage, GeneralPage, PersonalityPage
 from ui.dashboard.sidebar import DashboardSidebar
 from ui.dashboard.connection_test_controller import ConnectionTestController
-from ui.dashboard.input_controls import scroll_page_with_wheel
+from ui.dashboard.dialogs import DashboardDialog
+from ui.dashboard.input_controls import finish_input, scroll_page_with_wheel
 
 
 class DashboardWindow(QMainWindow):
@@ -243,11 +244,11 @@ class DashboardWindow(QMainWindow):
                 options = {"group_settings_mode": True} if self.group_backend is not None else {}
                 saved = self.settings_backend.save(self._draft_snapshot, **options)
         except SettingsValidationError as exc:
-            QMessageBox.warning(self, "設定內容無效", str(exc))
+            DashboardDialog.warning(self, "設定內容無效", str(exc))
             return False
         except Exception:
             logger.error("Failed to save dashboard settings", exc_info=True)
-            QMessageBox.warning(self, "儲存失敗", "設定未完整儲存，請稍後再試。")
+            DashboardDialog.warning(self, "儲存失敗", "設定未完整儲存，請稍後再試。")
             return False
 
         self._original_snapshot = saved
@@ -295,23 +296,23 @@ class DashboardWindow(QMainWindow):
         self._update_dirty_state()
 
     def _confirm_clear_history(self) -> None:
-        result = QMessageBox.question(
+        result = DashboardDialog.question(
             self,
             "確認刪除對話紀錄",
             "確定要刪除所有對話紀錄嗎？這個動作無法復原。",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No,
+            DashboardDialog.StandardButton.Yes | DashboardDialog.StandardButton.No,
+            DashboardDialog.StandardButton.No,
         )
-        if result != QMessageBox.StandardButton.Yes:
+        if result != DashboardDialog.StandardButton.Yes:
             return
 
         try:
             self.settings_backend.clear_history()
         except Exception:
             logger.error("Failed to clear conversation history", exc_info=True)
-            QMessageBox.warning(self, "刪除失敗", "無法刪除對話紀錄，請稍後再試。")
+            DashboardDialog.warning(self, "刪除失敗", "無法刪除對話紀錄，請稍後再試。")
             return
-        QMessageBox.information(self, "已刪除", "對話紀錄已清空。")
+        DashboardDialog.information(self, "已刪除", "對話紀錄已清空。")
 
     def closeEvent(self, event) -> None:
         if self._allow_close or not self.is_dirty:
@@ -319,22 +320,22 @@ class DashboardWindow(QMainWindow):
             event.accept()
             return
 
-        result = QMessageBox.question(
+        result = DashboardDialog.question(
             self,
             "尚有未儲存的變更",
             "要在關閉前儲存變更嗎？",
-            QMessageBox.StandardButton.Save
-            | QMessageBox.StandardButton.Discard
-            | QMessageBox.StandardButton.Cancel,
-            QMessageBox.StandardButton.Save,
+            DashboardDialog.StandardButton.Save
+            | DashboardDialog.StandardButton.Discard
+            | DashboardDialog.StandardButton.Cancel,
+            DashboardDialog.StandardButton.Save,
         )
-        if result == QMessageBox.StandardButton.Save:
+        if result == DashboardDialog.StandardButton.Save:
             if self.apply_changes():
                 self.connection_tests.invalidate()
                 event.accept()
             else:
                 event.ignore()
-        elif result == QMessageBox.StandardButton.Discard:
+        elif result == DashboardDialog.StandardButton.Discard:
             self._restore_original()
             self.connection_tests.invalidate()
             event.accept()
@@ -366,6 +367,9 @@ class DashboardWindow(QMainWindow):
 
     def eventFilter(self, watched, event):
         if event.type() == QEvent.Wheel and self._owns_object(watched):
+            focused = QApplication.focusWidget()
+            if focused is not None and self._owns_object(focused):
+                self._finish_wheel_input(focused)
             page = self.content_stack.currentWidget()
             if isinstance(page, QAbstractScrollArea):
                 scroll_page_with_wheel(page, event)
@@ -373,6 +377,18 @@ class DashboardWindow(QMainWindow):
                 event.accept()
             return True
         return super().eventFilter(watched, event)
+
+    @staticmethod
+    def _finish_wheel_input(focused):
+        current = focused
+        while current is not None:
+            if isinstance(current, QAbstractSpinBox):
+                finish_input(current)
+                return
+            current = current.parent()
+        finish_input(focused)
+        if focused.hasFocus():
+            focused.clearFocus()
 
     def _owns_object(self, watched):
         current = watched

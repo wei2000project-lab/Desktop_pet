@@ -8,8 +8,8 @@ from unittest.mock import patch, Mock
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QCloseEvent
+from PySide6.QtCore import QPoint, QPointF, Qt
+from PySide6.QtGui import QCloseEvent, QWheelEvent
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication, QBoxLayout, QGridLayout, QLineEdit, QMessageBox
 
@@ -74,6 +74,13 @@ class DashboardAPIGroupTests(unittest.TestCase):
         row = group["keys"][0] if key else group
         controller.start_group(group["id"], row["id"] if key else "")
         return controller, group, row
+
+    @staticmethod
+    def wheel_event():
+        return QWheelEvent(
+            QPointF(5, 5), QPointF(5, 5), QPoint(), QPoint(0, -120),
+            Qt.NoButton, Qt.NoModifier, Qt.ScrollUpdate, False,
+        )
 
     def test_group_check_uses_draft_without_saving(self):
         controller, group, row = self.start_test()
@@ -251,7 +258,7 @@ class DashboardAPIGroupTests(unittest.TestCase):
         row["url"].setText("https://example.test/v1/chat/completions/")
         self.assertIn("請移除", row["url_note"].text())
         self.assertFalse(row["advanced_body"].isHidden())
-        with patch("ui.dashboard.dashboard_window.QMessageBox.warning") as warning:
+        with patch("ui.dashboard.dashboard_window.DashboardDialog.warning") as warning:
             self.assertFalse(self.window.apply_changes())
         self.assertIn("不要包含 /chat/completions", warning.call_args.args[2])
         self.assertTrue(self.window.is_dirty)
@@ -361,6 +368,31 @@ class DashboardAPIGroupTests(unittest.TestCase):
             "啟用中" if key["enabled"].isChecked() else "已停用",
         )
 
+    def test_api_page_wheel_only_scrolls_and_finishes_active_input(self):
+        self.window.show()
+        self.window.resize(650, 600)
+        self.window.select_page("ai")
+        self.app.processEvents()
+        group = self.editor.group_rows[0]
+        key = group["keys"][0]
+        temperature = group["temperature"]
+        temperature.editor.setFocus()
+        temperature.editor.lineEdit().setText("1.4")
+        temperature.editor.lineEdit().selectAll()
+        self.app.processEvents()
+
+        QApplication.sendEvent(temperature.editor.lineEdit(), self.wheel_event())
+
+        self.assertAlmostEqual(temperature.value(), 1.4)
+        self.assertFalse(temperature.editor.hasFocus())
+        self.assertEqual(temperature.editor.lineEdit().selectedText(), "")
+        priority = key["priority"].currentData()
+        enabled = key["enabled"].isChecked()
+        QApplication.sendEvent(key["priority"], self.wheel_event())
+        QApplication.sendEvent(key["enabled"], self.wheel_event())
+        self.assertEqual(key["priority"].currentData(), priority)
+        self.assertEqual(key["enabled"].isChecked(), enabled)
+
     def test_unavailable_active_group_is_clearly_marked(self):
         key = self.editor.group_rows[0]["keys"][0]
         key["enabled"].setChecked(False)
@@ -420,10 +452,10 @@ class DashboardAPIGroupTests(unittest.TestCase):
 
     def test_delete_active_group_requires_confirmation_and_becomes_unconfigured(self):
         row = self.editor.group_rows[0]
-        with patch("ui.dashboard.api_group_editor.QMessageBox.question", return_value=QMessageBox.No):
+        with patch("ui.dashboard.api_group_editor.DashboardDialog.question", return_value=QMessageBox.No):
             row["delete_action"].trigger()
         self.assertEqual(len(self.editor.group_rows), 1)
-        with patch("ui.dashboard.api_group_editor.QMessageBox.question", return_value=QMessageBox.Yes):
+        with patch("ui.dashboard.api_group_editor.DashboardDialog.question", return_value=QMessageBox.Yes):
             row["delete_action"].trigger()
         self.assertIsNone(self.editor.collect_settings().active_group_id)
         self.assertTrue(self.window.apply_changes())
@@ -454,10 +486,42 @@ class DashboardAPIGroupTests(unittest.TestCase):
         self.assertEqual(self.editor.collect_settings(), original)
         self.assertFalse(self.path.exists())
 
+    def test_saved_group_survives_new_dashboard_instance(self):
+        row = self.editor.group_rows[0]
+        key = row["keys"][0]
+        row["name"].setText("重啟後群組")
+        row["model"].setText("restart-model")
+        key["priority"].setCurrentIndex(key["priority"].findData(7))
+        key["enabled"].setChecked(False)
+        self.assertTrue(self.window.apply_changes())
+
+        reopened = DashboardWindow(
+            settings_backend=SettingsService(self.store, lambda _event: None),
+            group_backend=APIGroupService(self.store, lambda _event: None),
+        )
+        try:
+            restored = reopened.ai_page.group_editor.collect_settings().groups[0]
+            self.assertEqual(restored.name, "重啟後群組")
+            self.assertEqual(restored.model, "restart-model")
+            self.assertEqual(restored.keys[0].priority, 7)
+            self.assertFalse(restored.keys[0].enabled)
+        finally:
+            reopened._allow_close = True
+            reopened.close()
+            reopened.deleteLater()
+
+    def test_close_save_persists_group_draft(self):
+        self.editor.group_rows[0]["name"].setText("關閉時儲存")
+        event = QCloseEvent()
+        with patch("ui.dashboard.dashboard_window.DashboardDialog.question", return_value=QMessageBox.Save):
+            self.window.closeEvent(event)
+        self.assertTrue(event.isAccepted())
+        self.assertEqual(self.groups.load().groups[0].name, "關閉時儲存")
+
     def test_invalid_group_blocks_save_and_keeps_draft(self):
         self.editor.group_rows[0]["url"].setText("bad-url")
         self.window.appearance_page.width_input.setValue(400)
-        with patch("ui.dashboard.dashboard_window.QMessageBox.warning"):
+        with patch("ui.dashboard.dashboard_window.DashboardDialog.warning"):
             self.assertFalse(self.window.apply_changes())
         self.assertFalse(self.path.exists())
         self.assertTrue(self.window.is_dirty)
@@ -472,7 +536,7 @@ class DashboardAPIGroupTests(unittest.TestCase):
                 raise OSError("test failure")
             real_replace(source, destination)
         with (patch("app.core.config_manager.os.replace", side_effect=fail_group),
-              patch("ui.dashboard.dashboard_window.QMessageBox.warning"),
+              patch("ui.dashboard.dashboard_window.DashboardDialog.warning"),
               patch("ui.dashboard.dashboard_window.logger.error")):
             self.assertFalse(self.window.apply_changes())
         self.assertEqual(list(self.root.iterdir()), [])
@@ -482,8 +546,8 @@ class DashboardAPIGroupTests(unittest.TestCase):
     def test_invalid_close_save_does_not_close(self):
         self.editor.group_rows[0]["model"].clear()
         event = QCloseEvent()
-        with (patch("ui.dashboard.dashboard_window.QMessageBox.question", return_value=QMessageBox.Save),
-              patch("ui.dashboard.dashboard_window.QMessageBox.warning")):
+        with (patch("ui.dashboard.dashboard_window.DashboardDialog.question", return_value=QMessageBox.Save),
+              patch("ui.dashboard.dashboard_window.DashboardDialog.warning")):
             self.window.closeEvent(event)
         self.assertFalse(event.isAccepted())
         self.assertFalse(self.path.exists())

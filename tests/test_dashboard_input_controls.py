@@ -72,6 +72,22 @@ class DashboardInputControlTests(unittest.TestCase):
                 self.assertFalse(control.editor.hasFocus())
                 self.assertEqual(control.editor.lineEdit().selectedText(), "")
 
+    def test_wheel_commits_and_clears_focused_numeric_editor(self):
+        control = self.page.width_input
+        control.editor.setFocus()
+        control.editor.lineEdit().setText("333")
+        control.editor.lineEdit().selectAll()
+        self.app.processEvents()
+        self.assertTrue(control.editor.hasFocus())
+        self.assertTrue(control.editor.lineEdit().selectedText())
+
+        self.assert_page_scrolls(control.editor.lineEdit())
+
+        self.assertEqual(control.value(), 333)
+        self.assertFalse(control.editor.hasFocus())
+        self.assertFalse(control.editor.lineEdit().hasFocus())
+        self.assertEqual(control.editor.lineEdit().selectedText(), "")
+
     def test_step_buttons_and_keyboard_api_still_change_numbers(self):
         control = IntegerInput()
         control.setRange(0, 10)

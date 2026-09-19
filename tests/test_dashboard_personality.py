@@ -90,7 +90,7 @@ class DashboardPersonalityTests(unittest.TestCase):
         self.page.personality_buttons["custom"].click()
         self.page.custom_personality_input.setPlainText("不儲存")
         event = QCloseEvent()
-        with patch("ui.dashboard.dashboard_window.QMessageBox.question",
+        with patch("ui.dashboard.dashboard_window.DashboardDialog.question",
                    return_value=QMessageBox.StandardButton.Discard):
             self.window.closeEvent(event)
         self.assertTrue(event.isAccepted())
