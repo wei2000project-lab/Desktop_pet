@@ -482,6 +482,10 @@ class DashboardWindow(QMainWindow):
                 border: 1px solid #ded8e4;
                 border-radius: 9px;
             }
+            QLabel[validationError="true"] {
+                color: #b3261e;
+                font-weight: 600;
+            }
             #dashboardSectionTitle {
                 color: #2e2932;
                 font-size: 16px;
@@ -500,6 +504,15 @@ class DashboardWindow(QMainWindow):
                 border-radius: 6px;
                 min-height: 32px;
                 padding-left: 8px;
+            }
+            #dashboardSettingsCard QSpinBox:focus,
+            #dashboardSettingsCard QDoubleSpinBox:focus,
+            #dashboardSettingsCard QLineEdit:focus,
+            #dashboardSettingsCard QComboBox:focus {
+                border: 2px solid #7b4ba0;
+            }
+            #dashboardSettingsCard QPushButton:focus {
+                border: 2px solid #7b4ba0;
             }
             QPushButton#dashboardNumberStepButton {
                 background-color: #ffffff;

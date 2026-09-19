@@ -109,6 +109,10 @@ class AIPage(QScrollArea):
             else:
                 control.valueChanged.connect(self._emit_settings)
 
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self.group_editor._update_responsive_layout(max(0, self.viewport().width() - 64))
+
     @staticmethod
     def _card(layout, title):
         card = QWidget()

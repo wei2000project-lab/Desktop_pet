@@ -5,7 +5,7 @@ from urllib.parse import urlsplit
 
 from PySide6.QtCore import Signal, Qt
 from PySide6.QtWidgets import (
-    QFormLayout, QGridLayout, QHBoxLayout, QLabel, QLineEdit, QMenu,
+    QBoxLayout, QFormLayout, QGridLayout, QHBoxLayout, QLabel, QLineEdit, QMenu,
     QMessageBox, QPushButton, QStackedWidget, QVBoxLayout, QWidget, QSizePolicy,
 )
 
@@ -19,6 +19,7 @@ from ui.dashboard.input_controls import NoWheelCheckBox, NoWheelComboBox
 class APIGroupEditor(QWidget):
     settings_changed = Signal(object)
     test_requested = Signal(str, str)
+    RESPONSIVE_WIDTH = 600
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -27,6 +28,7 @@ class APIGroupEditor(QWidget):
         self._active_id = None
         self._selected_id = None
         self._schema_version = 1
+        self._narrow = False
         self.group_rows = []
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -35,8 +37,9 @@ class APIGroupEditor(QWidget):
         notice.setObjectName("dashboardPlaceholderStatus")
         notice.setWordWrap(True)
         layout.addWidget(notice)
-        master_detail = QHBoxLayout()
+        master_detail = QBoxLayout(QBoxLayout.LeftToRight)
         master_detail.setSpacing(14)
+        self.master_detail_layout = master_detail
         self.group_list_pane = QWidget()
         self.group_list_pane.setObjectName("dashboardApiGroupList")
         self.group_list_pane.setMinimumWidth(180)
@@ -74,6 +77,7 @@ class APIGroupEditor(QWidget):
         self.state_label.setWordWrap(True)
         self.state_label.setObjectName("dashboardPageDescription")
         layout.addWidget(self.state_label)
+        self._update_responsive_layout()
 
     def load_settings(self, settings: APIGroupSettings):
         self.generation += 1
@@ -119,24 +123,22 @@ class APIGroupEditor(QWidget):
         layout = QVBoxLayout(container)
         layout.setContentsMargins(18, 16, 18, 16)
         header = QHBoxLayout()
-        toggle = QPushButton()
-        toggle.setCheckable(True)
-        toggle.setChecked(True)
-        toggle.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Fixed)
-        toggle.setToolTip("展開或收合群組")
+        title = QLabel()
+        title.setObjectName("dashboardSectionTitle")
+        title.setWordWrap(True)
         active_button = QPushButton("設為目前使用")
         delete_button = QPushButton("刪除群組")
         delete_button.setObjectName("dashboardDangerButton")
-        header.addWidget(toggle, 1)
+        header.addWidget(title, 1)
         header.addWidget(active_button)
         header.addWidget(delete_button)
         layout.addLayout(header)
         body = QWidget()
         body_layout = QVBoxLayout(body)
         body_layout.setContentsMargins(0, 8, 0, 0)
-        form = QFormLayout()
-        form.setRowWrapPolicy(QFormLayout.WrapLongRows)
-        form.setSpacing(12)
+        primary_form = QFormLayout()
+        primary_form.setRowWrapPolicy(QFormLayout.WrapLongRows)
+        primary_form.setSpacing(12)
         name = QLineEdit(group.name)
         url = QLineEdit(group.base_url)
         url_note = QLabel("請填 API 根路徑，程式會自動附加 /chat/completions。")
@@ -154,14 +156,26 @@ class APIGroupEditor(QWidget):
         mode.addItem("使用 API Key", "api_key")
         mode.addItem("免金鑰連線", "none")
         mode.setCurrentIndex(mode.findData(group.auth_mode))
-        for label, control in (("群組名稱：", name), ("Base URL：", url), ("模型：", model),
-                               ("溫度：", temperature), ("驗證模式：", mode)):
+        for label, control in (("群組名稱：", name), ("模型：", model), ("溫度：", temperature)):
             control.setAccessibleName(label.rstrip("："))
-            form.addRow(label, control)
+            primary_form.addRow(label, control)
+        body_layout.addLayout(primary_form)
+        advanced_button = QPushButton("顯示進階設定")
+        advanced_button.setCheckable(True)
+        advanced_body = QWidget()
+        advanced_form = QFormLayout(advanced_body)
+        advanced_form.setContentsMargins(0, 4, 0, 8)
+        advanced_form.setRowWrapPolicy(QFormLayout.WrapLongRows)
+        advanced_form.setSpacing(12)
+        for label, control in (("Base URL：", url), ("驗證模式：", mode)):
+            control.setAccessibleName(label.rstrip("："))
+            advanced_form.addRow(label, control)
             if control is url:
-                form.addRow("", url_note)
-        form.addRow(ssl)
-        body_layout.addLayout(form)
+                advanced_form.addRow("", url_note)
+        advanced_form.addRow(ssl)
+        advanced_body.hide()
+        body_layout.addWidget(advanced_button)
+        body_layout.addWidget(advanced_body)
         test_button = QPushButton("測試免金鑰連線")
         test_status = QLabel()
         test_status.setTextFormat(Qt.PlainText)
@@ -183,7 +197,8 @@ class APIGroupEditor(QWidget):
         key_note.setWordWrap(True)
         body_layout.addWidget(key_note)
         layout.addWidget(body)
-        row = {"id": group.id, "container": container, "toggle": toggle, "body": body,
+        row = {"id": group.id, "container": container, "toggle": advanced_button, "body": body,
+               "title": title, "advanced_button": advanced_button, "advanced_body": advanced_body,
                "name": name, "url": url, "model": model, "temperature": temperature,
                "ssl": ssl, "mode": mode, "keys": [], "key_layout": key_layout,
                "active_button": active_button, "delete_button": delete_button, "add_key": add_key,
@@ -198,8 +213,10 @@ class APIGroupEditor(QWidget):
         self.detail_stack.addWidget(container)
         for entry in group.keys:
             self.add_key(group.id, entry)
-        toggle.toggled.connect(body.setVisible)
         list_button.clicked.connect(lambda: self.select_group(group.id))
+        advanced_button.toggled.connect(
+            lambda checked: self._set_advanced_visible(row, checked)
+        )
         active_button.clicked.connect(lambda: self.set_active(group.id))
         delete_button.clicked.connect(lambda: self.confirm_delete_group(group.id))
         add_key.clicked.connect(lambda: self.add_key(group.id))
@@ -211,6 +228,7 @@ class APIGroupEditor(QWidget):
         mode.currentIndexChanged.connect(self._changed)
         self._changed()
         self._update_url_note(row)
+        self._arrange_all_keys()
         return row
 
     @property
@@ -249,7 +267,9 @@ class APIGroupEditor(QWidget):
         key.setAccessibleName("群組 API Key")
         show = QPushButton("顯示")
         show.setCheckable(True)
-        key_fields = QHBoxLayout()
+        key_widget = QWidget()
+        key_fields = QHBoxLayout(key_widget)
+        key_fields.setContentsMargins(0, 0, 0, 0)
         key_fields.addWidget(key, 1)
         key_fields.addWidget(show)
         priority = IntegerInput()
@@ -274,27 +294,21 @@ class APIGroupEditor(QWidget):
         test_status.setTextFormat(Qt.PlainText)
         test_status.setWordWrap(True)
         test_status.hide()
-        actions = QHBoxLayout()
+        actions_widget = QWidget()
+        actions = QHBoxLayout(actions_widget)
+        actions.setContentsMargins(0, 0, 0, 0)
         actions.addWidget(test_button)
         actions.addWidget(more)
-        layout.addWidget(name, 0, 0)
-        layout.addWidget(source, 0, 1)
-        layout.addWidget(enabled, 0, 2)
-        layout.addLayout(key_fields, 1, 0, 1, 2)
-        layout.addWidget(priority, 1, 2)
-        layout.addWidget(status, 2, 0, 1, 2)
-        layout.addLayout(actions, 2, 2)
-        layout.addWidget(test_status, 3, 0, 1, 3)
-        layout.setColumnStretch(0, 2)
-        layout.setColumnStretch(1, 2)
-        layout.setColumnStretch(2, 1)
         row = {"id": entry.id, "container": container, "name": name, "source": source,
                "key": key, "show": show, "priority": priority, "enabled": enabled, "status": status,
-               "more": more, "delete_action": delete_action}
+               "more": more, "delete_action": delete_action, "layout": layout,
+               "key_widget": key_widget, "actions_widget": actions_widget,
+               "test_status": test_status}
         group["keys"].append(row)
         row.update(test_button=test_button, test_status=test_status, testing=False)
         test_button.clicked.connect(lambda: self.test_requested.emit(group_id, entry.id))
         group["key_layout"].addWidget(container)
+        self._arrange_key(row, self._narrow)
 
         def update_source(*_args):
             is_stored = source.currentData() == "stored"
@@ -383,6 +397,62 @@ class APIGroupEditor(QWidget):
             if duplicate else "請填 API 根路徑，程式會自動附加 /chat/completions。"
         )
         row["url_note"].setProperty("validationError", duplicate)
+        row["url_note"].setStyleSheet(
+            "color: #b3261e; font-weight: 600;" if duplicate else ""
+        )
+        if duplicate:
+            row["advanced_button"].setChecked(True)
+
+    def _set_advanced_visible(self, row, visible):
+        row["advanced_body"].setVisible(visible)
+        row["advanced_button"].setText("隱藏進階設定" if visible else "顯示進階設定")
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self._update_responsive_layout(event.size().width())
+
+    def _update_responsive_layout(self, width=None):
+        narrow = (self.width() if width is None else width) < self.RESPONSIVE_WIDTH
+        if narrow == self._narrow and width is not None:
+            return
+        self._narrow = narrow
+        self.master_detail_layout.setDirection(
+            QBoxLayout.TopToBottom if narrow else QBoxLayout.LeftToRight
+        )
+        self.group_list_pane.setMinimumWidth(0 if narrow else 180)
+        self.group_list_pane.setMaximumWidth(16777215 if narrow else 230)
+        self._arrange_all_keys()
+
+    def _arrange_all_keys(self):
+        for group in self.group_rows:
+            for entry in group["keys"]:
+                self._arrange_key(entry, self._narrow)
+
+    @staticmethod
+    def _arrange_key(row, narrow):
+        layout = row["layout"]
+        while layout.count():
+            layout.takeAt(0)
+        if narrow:
+            for line, widget in enumerate((row["name"], row["source"], row["key_widget"],
+                                           row["priority"], row["enabled"], row["actions_widget"],
+                                           row["status"], row["test_status"])):
+                layout.addWidget(widget, line, 0)
+            layout.setColumnStretch(0, 1)
+            layout.setColumnStretch(1, 0)
+            layout.setColumnStretch(2, 0)
+        else:
+            layout.addWidget(row["name"], 0, 0)
+            layout.addWidget(row["source"], 0, 1)
+            layout.addWidget(row["enabled"], 0, 2)
+            layout.addWidget(row["key_widget"], 1, 0, 1, 2)
+            layout.addWidget(row["priority"], 1, 2)
+            layout.addWidget(row["status"], 2, 0, 1, 2)
+            layout.addWidget(row["actions_widget"], 2, 2)
+            layout.addWidget(row["test_status"], 3, 0, 1, 3)
+            layout.setColumnStretch(0, 2)
+            layout.setColumnStretch(1, 2)
+            layout.setColumnStretch(2, 1)
 
     def collect_settings(self):
         groups = []
@@ -435,15 +505,15 @@ class APIGroupEditor(QWidget):
             selected = row["id"] == self._selected_id
             enabled_count = sum(entry.enabled for entry in group.keys)
             mode = "免金鑰" if row["mode"].currentData() == "none" else f"啟用 Key：{enabled_count}"
-            row["toggle"].setText(f"{row['name'].text().strip() or '未命名'} · {mode}"
-                                  + (" · 目前群組" if active else "")
-                                  + (" · 編輯中" if selected else ""))
+            row["title"].setText(f"{row['name'].text().strip() or '未命名'} · {mode}"
+                                 + (" · 目前群組" if active else ""))
             row["container"].setProperty("editingSelected", selected)
             row["list_button"].setChecked(selected)
             row["list_button"].setProperty("activeGroup", active)
             row["list_button"].setText(
                 f"{'● ' if active else ''}{row['name'].text().strip() or '未命名'}"
-                f"{' · 目前使用' if active else ''}\n"
+                f"{' · 目前使用' if active else ''}"
+                f"{' · 編輯中' if selected else ''}\n"
                 f"{row['url'].text().strip() or '尚未設定網址'}"
             )
             row["list_button"].setAccessibleName(

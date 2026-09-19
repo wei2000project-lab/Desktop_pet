@@ -11,7 +11,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QCloseEvent
 from PySide6.QtTest import QTest
-from PySide6.QtWidgets import QApplication, QGridLayout, QLineEdit, QMessageBox
+from PySide6.QtWidgets import QApplication, QBoxLayout, QGridLayout, QLineEdit, QMessageBox
 
 from app.core.config_manager import ConfigManager
 from app.settings import APIGroupService, SettingsService
@@ -225,7 +225,7 @@ class DashboardAPIGroupTests(unittest.TestCase):
         added = self.editor.add_group()
         self.assertEqual(self.editor.selected_group_id, added["id"])
         self.assertEqual(self.editor.collect_settings().active_group_id, active)
-        self.assertIn("編輯中", added["toggle"].text())
+        self.assertIn("編輯中", added["list_button"].text())
         draft = self.editor.collect_settings()
         first = self.editor.group_rows[0]
         first["list_button"].click()
@@ -249,6 +249,7 @@ class DashboardAPIGroupTests(unittest.TestCase):
         row = self.editor.group_rows[0]
         row["url"].setText("https://example.test/v1/chat/completions/")
         self.assertIn("請移除", row["url_note"].text())
+        self.assertFalse(row["advanced_body"].isHidden())
         with patch("ui.dashboard.dashboard_window.QMessageBox.warning") as warning:
             self.assertFalse(self.window.apply_changes())
         self.assertIn("不要包含 /chat/completions", warning.call_args.args[2])
@@ -267,13 +268,38 @@ class DashboardAPIGroupTests(unittest.TestCase):
     def test_collapsing_and_revealing_do_not_dirty(self):
         row = self.editor.group_rows[0]
         row["toggle"].click()
-        self.assertTrue(row["body"].isHidden())
+        self.assertFalse(row["advanced_body"].isHidden())
+        row["toggle"].click()
+        self.assertTrue(row["advanced_body"].isHidden())
         key = row["keys"][0]
         key["show"].click()
         self.assertEqual(key["key"].echoMode(), QLineEdit.Normal)
         key["show"].click()
         self.assertEqual(key["key"].echoMode(), QLineEdit.Password)
         self.assertFalse(self.window.is_dirty)
+
+    def test_responsive_layout_reflows_master_detail_and_key_fields(self):
+        row = self.editor.group_rows[0]
+        key = row["keys"][0]
+        self.editor._update_responsive_layout(800)
+        self.assertEqual(self.editor.master_detail_layout.direction(), QBoxLayout.LeftToRight)
+        wide_source_row = key["layout"].getItemPosition(key["layout"].indexOf(key["source"]))[0]
+        self.editor._update_responsive_layout(520)
+        self.assertEqual(self.editor.master_detail_layout.direction(), QBoxLayout.TopToBottom)
+        narrow_source_row = key["layout"].getItemPosition(key["layout"].indexOf(key["source"]))[0]
+        self.assertEqual(wide_source_row, 0)
+        self.assertEqual(narrow_source_row, 1)
+        self.assertEqual(self.editor.group_list_pane.maximumWidth(), 16777215)
+
+    def test_dashboard_window_drives_wide_and_narrow_api_layouts(self):
+        self.window.select_page("ai")
+        self.window.show()
+        self.window.resize(900, 760)
+        self.app.processEvents()
+        self.assertEqual(self.editor.master_detail_layout.direction(), QBoxLayout.LeftToRight)
+        self.window.resize(650, 600)
+        self.app.processEvents()
+        self.assertEqual(self.editor.master_detail_layout.direction(), QBoxLayout.TopToBottom)
 
     def test_priority_and_x_keep_previous_priority(self):
         key = self.editor.group_rows[0]["keys"][0]
