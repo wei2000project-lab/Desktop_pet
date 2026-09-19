@@ -267,8 +267,10 @@ class DashboardAPIGroupTests(unittest.TestCase):
 
     def test_collapsing_and_revealing_do_not_dirty(self):
         row = self.editor.group_rows[0]
+        self.assertEqual(row["toggle"].text(), "編輯")
         row["toggle"].click()
         self.assertFalse(row["advanced_body"].isHidden())
+        self.assertEqual(row["toggle"].text(), "完成")
         row["toggle"].click()
         self.assertTrue(row["advanced_body"].isHidden())
         key = row["keys"][0]
@@ -277,6 +279,21 @@ class DashboardAPIGroupTests(unittest.TestCase):
         key["show"].click()
         self.assertEqual(key["key"].echoMode(), QLineEdit.Password)
         self.assertFalse(self.window.is_dirty)
+
+    def test_group_summary_replaces_always_visible_group_fields(self):
+        row = self.editor.group_rows[0]
+        self.assertTrue(row["advanced_body"].isHidden())
+        self.assertEqual(row["title"].text(), "預設 API")
+        self.assertEqual(row["summary_url"].text(), "https://example.test/v1")
+        self.assertIn("old-model", row["summary_meta"].text())
+        self.assertIn("使用 API Key", row["summary_meta"].text())
+        self.assertFalse(row["active_badge"].isHidden())
+        self.assertTrue(self.editor.state_label.isHidden())
+
+        row["model"].setText("summary-model")
+        row["ssl"].setChecked(True)
+        self.assertIn("summary-model", row["summary_meta"].text())
+        self.assertIn("SSL 驗證開啟", row["summary_meta"].text())
 
     def test_responsive_layout_reflows_master_detail_and_key_fields(self):
         row = self.editor.group_rows[0]
@@ -371,10 +388,10 @@ class DashboardAPIGroupTests(unittest.TestCase):
     def test_delete_active_group_requires_confirmation_and_becomes_unconfigured(self):
         row = self.editor.group_rows[0]
         with patch("ui.dashboard.api_group_editor.QMessageBox.question", return_value=QMessageBox.No):
-            row["delete_button"].click()
+            row["delete_action"].trigger()
         self.assertEqual(len(self.editor.group_rows), 1)
         with patch("ui.dashboard.api_group_editor.QMessageBox.question", return_value=QMessageBox.Yes):
-            row["delete_button"].click()
+            row["delete_action"].trigger()
         self.assertIsNone(self.editor.collect_settings().active_group_id)
         self.assertTrue(self.window.apply_changes())
         self.assertEqual(self.groups.load().groups, ())

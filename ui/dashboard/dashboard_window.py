@@ -482,6 +482,20 @@ class DashboardWindow(QMainWindow):
                 border: 1px solid #ded8e4;
                 border-radius: 9px;
             }
+            #dashboardStatusBadge {
+                background-color: #eadcf5;
+                border: 1px solid #d4bce7;
+                border-radius: 10px;
+                color: #5f2d82;
+                font-size: 12px;
+                font-weight: 600;
+                padding: 3px 8px;
+            }
+            #dashboardSummaryPrimary {
+                color: #3f3944;
+                font-size: 14px;
+                font-weight: 500;
+            }
             QLabel[validationError="true"] {
                 color: #b3261e;
                 font-weight: 600;

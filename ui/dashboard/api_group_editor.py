@@ -33,10 +33,6 @@ class APIGroupEditor(QWidget):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(14)
-        notice = QLabel("正式請求使用已儲存的目前群組；修改後請按套用。連線測試使用草稿、不自動儲存，會發送請求並可能消耗額度。X 金鑰仍可手動測試。")
-        notice.setObjectName("dashboardPlaceholderStatus")
-        notice.setWordWrap(True)
-        layout.addWidget(notice)
         master_detail = QBoxLayout(QBoxLayout.LeftToRight)
         master_detail.setSpacing(14)
         self.master_detail_layout = master_detail
@@ -119,26 +115,58 @@ class APIGroupEditor(QWidget):
         list_button.setAccessibleName(f"編輯 API 群組 {group.name}")
         self.group_list_layout.addWidget(list_button)
         container = QWidget()
-        container.setObjectName("dashboardSettingsCard")
+        container.setObjectName("dashboardApiGroupDetailsContent")
         layout = QVBoxLayout(container)
-        layout.setContentsMargins(18, 16, 18, 16)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(12)
+
+        summary_card = QWidget()
+        summary_card.setObjectName("dashboardSettingsCard")
+        summary_layout = QVBoxLayout(summary_card)
+        summary_layout.setContentsMargins(18, 16, 18, 16)
+        summary_layout.setSpacing(8)
         header = QHBoxLayout()
         title = QLabel()
         title.setObjectName("dashboardSectionTitle")
         title.setWordWrap(True)
-        active_button = QPushButton("設為目前使用")
-        delete_button = QPushButton("刪除群組")
-        delete_button.setObjectName("dashboardDangerButton")
+        active_badge = QLabel("目前使用")
+        active_badge.setObjectName("dashboardStatusBadge")
+        edit_button = QPushButton("編輯")
+        edit_button.setCheckable(True)
+        more_button = QPushButton("⋯")
+        more_button.setAccessibleName("群組其他操作")
+        more_button.setToolTip("其他操作")
+        more_button.setFixedWidth(42)
+        group_menu = QMenu(more_button)
+        active_action = group_menu.addAction("設為目前使用")
+        delete_action = group_menu.addAction("刪除群組")
+        more_button.setMenu(group_menu)
         header.addWidget(title, 1)
-        header.addWidget(active_button)
-        header.addWidget(delete_button)
-        layout.addLayout(header)
-        body = QWidget()
-        body_layout = QVBoxLayout(body)
-        body_layout.setContentsMargins(0, 8, 0, 0)
-        primary_form = QFormLayout()
-        primary_form.setRowWrapPolicy(QFormLayout.WrapLongRows)
-        primary_form.setSpacing(12)
+        header.addWidget(active_badge)
+        header.addWidget(edit_button)
+        header.addWidget(more_button)
+        summary_layout.addLayout(header)
+        summary_url = QLabel()
+        summary_url.setObjectName("dashboardSummaryPrimary")
+        summary_url.setWordWrap(True)
+        summary_meta = QLabel()
+        summary_meta.setObjectName("dashboardPageDescription")
+        summary_meta.setWordWrap(True)
+        summary_layout.addWidget(summary_url)
+        summary_layout.addWidget(summary_meta)
+        layout.addWidget(summary_card)
+
+        group_edit_body = QWidget()
+        group_edit_body.setObjectName("dashboardSettingsCard")
+        group_edit_layout = QVBoxLayout(group_edit_body)
+        group_edit_layout.setContentsMargins(18, 16, 18, 16)
+        group_edit_layout.setSpacing(10)
+        group_edit_heading = QLabel("群組設定")
+        group_edit_heading.setObjectName("dashboardSectionTitle")
+        group_edit_layout.addWidget(group_edit_heading)
+        group_form = QFormLayout()
+        group_form.setRowWrapPolicy(QFormLayout.WrapLongRows)
+        group_form.setSpacing(12)
         name = QLineEdit(group.name)
         url = QLineEdit(group.base_url)
         url_note = QLabel("請填 API 根路徑，程式會自動附加 /chat/completions。")
@@ -156,53 +184,68 @@ class APIGroupEditor(QWidget):
         mode.addItem("使用 API Key", "api_key")
         mode.addItem("免金鑰連線", "none")
         mode.setCurrentIndex(mode.findData(group.auth_mode))
-        for label, control in (("群組名稱：", name), ("模型：", model), ("溫度：", temperature)):
+        for label, control in (("群組名稱：", name), ("Base URL：", url), ("驗證模式：", mode)):
             control.setAccessibleName(label.rstrip("："))
-            primary_form.addRow(label, control)
-        body_layout.addLayout(primary_form)
-        advanced_button = QPushButton("顯示進階設定")
-        advanced_button.setCheckable(True)
-        advanced_body = QWidget()
-        advanced_form = QFormLayout(advanced_body)
-        advanced_form.setContentsMargins(0, 4, 0, 8)
-        advanced_form.setRowWrapPolicy(QFormLayout.WrapLongRows)
-        advanced_form.setSpacing(12)
-        for label, control in (("Base URL：", url), ("驗證模式：", mode)):
-            control.setAccessibleName(label.rstrip("："))
-            advanced_form.addRow(label, control)
+            group_form.addRow(label, control)
             if control is url:
-                advanced_form.addRow("", url_note)
-        advanced_form.addRow(ssl)
-        advanced_body.hide()
-        body_layout.addWidget(advanced_button)
-        body_layout.addWidget(advanced_body)
+                group_form.addRow("", url_note)
+        group_form.addRow(ssl)
+        group_edit_layout.addLayout(group_form)
         test_button = QPushButton("測試免金鑰連線")
         test_status = QLabel()
         test_status.setTextFormat(Qt.PlainText)
         test_status.setWordWrap(True)
-        body_layout.addWidget(test_button)
-        body_layout.addWidget(test_status)
+        test_note = QLabel("連線測試會送出真實請求，可能產生服務費用。")
+        test_note.setObjectName("dashboardPageDescription")
+        test_note.setWordWrap(True)
+        group_edit_layout.addWidget(test_button)
+        group_edit_layout.addWidget(test_note)
+        group_edit_layout.addWidget(test_status)
+        group_edit_body.hide()
+        layout.addWidget(group_edit_body)
+
+        model_card = QWidget()
+        model_card.setObjectName("dashboardSettingsCard")
+        model_layout = QVBoxLayout(model_card)
+        model_layout.setContentsMargins(18, 16, 18, 16)
+        model_layout.setSpacing(10)
+        model_heading = QLabel("模型設定")
+        model_heading.setObjectName("dashboardSectionTitle")
+        model_layout.addWidget(model_heading)
+        model_form = QFormLayout()
+        model_form.setRowWrapPolicy(QFormLayout.WrapLongRows)
+        model_form.setSpacing(12)
+        for label, control in (("模型：", model), ("溫度：", temperature)):
+            control.setAccessibleName(label.rstrip("："))
+            model_form.addRow(label, control)
+        model_layout.addLayout(model_form)
+        layout.addWidget(model_card)
+
+        key_card = QWidget()
+        key_card.setObjectName("dashboardSettingsCard")
+        key_card_layout = QVBoxLayout(key_card)
+        key_card_layout.setContentsMargins(18, 16, 18, 16)
+        key_card_layout.setSpacing(10)
         key_header = QHBoxLayout()
         key_count = QLabel()
         key_count.setObjectName("dashboardSectionTitle")
         key_header.addWidget(key_count, 1)
         add_key = QPushButton("新增 Key")
         key_header.addWidget(add_key)
-        body_layout.addLayout(key_header)
+        key_card_layout.addLayout(key_header)
         key_layout = QVBoxLayout()
         key_layout.setSpacing(8)
-        body_layout.addLayout(key_layout)
-        key_note = QLabel("X 表示暫停自動使用；免金鑰模式不會使用任何 Key，但會保留列表。")
-        key_note.setObjectName("dashboardPageDescription")
-        key_note.setWordWrap(True)
-        body_layout.addWidget(key_note)
-        layout.addWidget(body)
-        row = {"id": group.id, "container": container, "toggle": advanced_button, "body": body,
-               "title": title, "advanced_button": advanced_button, "advanced_body": advanced_body,
+        key_card_layout.addLayout(key_layout)
+        layout.addWidget(key_card)
+        row = {"id": group.id, "container": container, "toggle": edit_button,
+               "title": title, "advanced_button": edit_button, "advanced_body": group_edit_body,
                "name": name, "url": url, "model": model, "temperature": temperature,
                "ssl": ssl, "mode": mode, "keys": [], "key_layout": key_layout,
-               "active_button": active_button, "delete_button": delete_button, "add_key": add_key,
-               "list_button": list_button, "url_note": url_note, "key_count": key_count}
+               "active_action": active_action, "delete_action": delete_action, "add_key": add_key,
+               "list_button": list_button, "url_note": url_note, "key_count": key_count,
+               "active_badge": active_badge, "summary_url": summary_url,
+               "summary_meta": summary_meta, "more_button": more_button,
+               "summary_card": summary_card, "model_card": model_card, "key_card": key_card}
         row["original_temperature"] = group.temperature
         row.update(test_button=test_button, test_status=test_status, testing=False)
         test_button.clicked.connect(lambda: self.test_requested.emit(group.id, ""))
@@ -214,11 +257,11 @@ class APIGroupEditor(QWidget):
         for entry in group.keys:
             self.add_key(group.id, entry)
         list_button.clicked.connect(lambda: self.select_group(group.id))
-        advanced_button.toggled.connect(
+        edit_button.toggled.connect(
             lambda checked: self._set_advanced_visible(row, checked)
         )
-        active_button.clicked.connect(lambda: self.set_active(group.id))
-        delete_button.clicked.connect(lambda: self.confirm_delete_group(group.id))
+        active_action.triggered.connect(lambda: self.set_active(group.id))
+        delete_action.triggered.connect(lambda: self.confirm_delete_group(group.id))
         add_key.clicked.connect(lambda: self.add_key(group.id))
         for control in (name, url, model):
             control.textChanged.connect(self._changed)
@@ -405,7 +448,7 @@ class APIGroupEditor(QWidget):
 
     def _set_advanced_visible(self, row, visible):
         row["advanced_body"].setVisible(visible)
-        row["advanced_button"].setText("隱藏進階設定" if visible else "顯示進階設定")
+        row["advanced_button"].setText("完成" if visible else "編輯")
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
@@ -505,22 +548,29 @@ class APIGroupEditor(QWidget):
             selected = row["id"] == self._selected_id
             enabled_count = sum(entry.enabled for entry in group.keys)
             mode = "免金鑰" if row["mode"].currentData() == "none" else f"啟用 Key：{enabled_count}"
-            row["title"].setText(f"{row['name'].text().strip() or '未命名'} · {mode}"
-                                 + (" · 目前群組" if active else ""))
+            name = row["name"].text().strip() or "未命名"
+            row["title"].setText(name)
+            row["active_badge"].setVisible(active)
+            row["summary_url"].setText(row["url"].text().strip() or "尚未設定網址")
+            ssl_text = "SSL 驗證開啟" if row["ssl"].isChecked() else "SSL 驗證關閉"
+            auth_text = "免金鑰" if group.auth_mode == "none" else "使用 API Key"
+            row["summary_meta"].setText(
+                f"{row['model'].text().strip() or '尚未設定模型'}  ·  {auth_text}  ·  {ssl_text}"
+            )
             row["container"].setProperty("editingSelected", selected)
             row["list_button"].setChecked(selected)
             row["list_button"].setProperty("activeGroup", active)
             row["list_button"].setText(
-                f"{'● ' if active else ''}{row['name'].text().strip() or '未命名'}"
+                f"{'● ' if active else ''}{name}"
                 f"{' · 目前使用' if active else ''}"
                 f"{' · 編輯中' if selected else ''}\n"
                 f"{row['url'].text().strip() or '尚未設定網址'}"
             )
             row["list_button"].setAccessibleName(
-                f"編輯 API 群組 {row['name'].text().strip() or '未命名'}"
+                f"編輯 API 群組 {name}"
                 + ("，目前使用" if active else "")
             )
-            row["active_button"].setEnabled(not active)
+            row["active_action"].setEnabled(not active)
             none = group.auth_mode == "none"
             row["test_button"].setVisible(none)
             row["test_button"].setEnabled(none and not row["testing"])
@@ -533,7 +583,8 @@ class APIGroupEditor(QWidget):
         self.detail_stack.setCurrentWidget(selected_row["container"] if selected_row else self.empty_detail)
         try:
             resolve_api_request(settings)
-            status = "目前群組已具備發送所需設定（尚未測試連線）。"
+            status = ""
         except APIGroupResolutionError as error:
             status = str(error)
-        self.state_label.setText(status + " 草稿修改套用後才會影響新請求。")
+        self.state_label.setText(status)
+        self.state_label.setVisible(bool(status))
