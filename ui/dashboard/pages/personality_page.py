@@ -6,6 +6,7 @@ from PySide6.QtWidgets import (
 
 from app.ai.prompt_builder import get_personality_option_labels
 from app.settings import SettingsSnapshot
+from ui.dashboard.input_controls import FocusClearingWidget
 
 
 class PersonalityPage(QScrollArea):
@@ -17,7 +18,7 @@ class PersonalityPage(QScrollArea):
         self.setFrameShape(QScrollArea.NoFrame)
         self._loading = False
         self._selected_key = ""
-        content = QWidget()
+        content = FocusClearingWidget()
         content.setObjectName("dashboardPageContent")
         layout = QVBoxLayout(content)
         layout.setContentsMargins(32, 28, 32, 28)

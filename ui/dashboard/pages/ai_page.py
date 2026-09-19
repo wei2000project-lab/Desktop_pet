@@ -9,6 +9,7 @@ from PySide6.QtWidgets import (
 from app.settings import ApiKeyEntry, SettingsSnapshot
 from ui.dashboard.number_input import DecimalInput, IntegerInput
 from ui.dashboard.api_group_editor import APIGroupEditor
+from ui.dashboard.input_controls import FocusClearingWidget, NoWheelCheckBox
 
 
 class AIPage(QScrollArea):
@@ -21,7 +22,7 @@ class AIPage(QScrollArea):
         self._legacy_cards = []
         self.setWidgetResizable(True)
         self.setFrameShape(QScrollArea.NoFrame)
-        content = QWidget()
+        content = FocusClearingWidget()
         content.setObjectName("dashboardPageContent")
         layout = QVBoxLayout(content)
         layout.setContentsMargins(32, 28, 32, 28)
@@ -83,7 +84,7 @@ class AIPage(QScrollArea):
         self.max_memory_turns_input.setRange(0, 50)
         self.history_limit_input = IntegerInput()
         self.history_limit_input.setRange(1, 100)
-        self.conversation_summary_check = QCheckBox("啟用過去對話摘要")
+        self.conversation_summary_check = NoWheelCheckBox("啟用過去對話摘要")
         memory_form.addRow("最大記憶輪數：", self.max_memory_turns_input)
         memory_form.addRow("歷史紀錄上限：", self.history_limit_input)
         memory_form.addRow(self.conversation_summary_check)

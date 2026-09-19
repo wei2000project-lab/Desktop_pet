@@ -5,6 +5,7 @@ from PySide6.QtWidgets import (
 
 from app.settings import SettingsSnapshot
 from ui.dashboard.number_input import IntegerInput
+from ui.dashboard.input_controls import FocusClearingWidget
 
 
 class BehaviorPage(QScrollArea):
@@ -15,7 +16,7 @@ class BehaviorPage(QScrollArea):
         self.setWidgetResizable(True)
         self.setFrameShape(QScrollArea.NoFrame)
 
-        content = QWidget()
+        content = FocusClearingWidget()
         content.setObjectName("dashboardPageContent")
         layout = QVBoxLayout(content)
         layout.setContentsMargins(32, 28, 32, 28)

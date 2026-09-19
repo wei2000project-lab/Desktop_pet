@@ -1,7 +1,10 @@
 from dataclasses import replace
 import os
 
+from PySide6.QtCore import QEvent
 from PySide6.QtWidgets import (
+    QApplication,
+    QAbstractScrollArea,
     QHBoxLayout,
     QLabel,
     QMainWindow,
@@ -21,6 +24,7 @@ from ui.dashboard.page_registry import PageDefinition, default_page_definitions
 from ui.dashboard.pages import AIPage, AppearancePage, BehaviorPage, GeneralPage, PersonalityPage
 from ui.dashboard.sidebar import DashboardSidebar
 from ui.dashboard.connection_test_controller import ConnectionTestController
+from ui.dashboard.input_controls import scroll_page_with_wheel
 
 
 class DashboardWindow(QMainWindow):
@@ -40,6 +44,7 @@ class DashboardWindow(QMainWindow):
         super().__init__(parent)
         self.setObjectName("dashboardWindow")
         self.setWindowTitle("Nova 設定")
+        self._wheel_filter_installed = False
         self.setMinimumSize(self.MINIMUM_WIDTH, self.MINIMUM_HEIGHT)
         self.resize(self.DEFAULT_WIDTH, self.DEFAULT_HEIGHT)
 
@@ -336,7 +341,16 @@ class DashboardWindow(QMainWindow):
 
     def showEvent(self, event) -> None:
         self._allow_close = False
+        if not self._wheel_filter_installed:
+            QApplication.instance().installEventFilter(self)
+            self._wheel_filter_installed = True
         super().showEvent(event)
+
+    def hideEvent(self, event) -> None:
+        if self._wheel_filter_installed:
+            QApplication.instance().removeEventFilter(self)
+            self._wheel_filter_installed = False
+        super().hideEvent(event)
 
     def resizeEvent(self, event) -> None:
         super().resizeEvent(event)
@@ -347,6 +361,24 @@ class DashboardWindow(QMainWindow):
                 True if is_narrow else self._manual_collapsed,
                 emit_signal=False,
             )
+
+    def eventFilter(self, watched, event):
+        if event.type() == QEvent.Wheel and self._owns_object(watched):
+            page = self.content_stack.currentWidget()
+            if isinstance(page, QAbstractScrollArea):
+                scroll_page_with_wheel(page, event)
+            else:
+                event.accept()
+            return True
+        return super().eventFilter(watched, event)
+
+    def _owns_object(self, watched):
+        current = watched
+        while current is not None:
+            if current is self:
+                return True
+            current = current.parent()
+        return False
 
     def _apply_styles(self) -> None:
         self.setStyleSheet(

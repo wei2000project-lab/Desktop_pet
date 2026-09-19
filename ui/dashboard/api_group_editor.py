@@ -4,13 +4,14 @@ from uuid import uuid4
 
 from PySide6.QtCore import Signal, Qt
 from PySide6.QtWidgets import (
-    QCheckBox, QComboBox, QFormLayout, QHBoxLayout, QLabel, QLineEdit,
+    QFormLayout, QHBoxLayout, QLabel, QLineEdit,
     QMessageBox, QPushButton, QVBoxLayout, QWidget, QSizePolicy,
 )
 
 from app.settings.api_groups import APIGroup, APIGroupKey, APIGroupSettings
 from app.settings.api_group_resolver import APIGroupResolutionError, resolve_api_request
 from ui.dashboard.number_input import DecimalInput, IntegerInput
+from ui.dashboard.input_controls import NoWheelCheckBox, NoWheelComboBox
 
 
 class APIGroupEditor(QWidget):
@@ -22,6 +23,7 @@ class APIGroupEditor(QWidget):
         self._loading = False
         self.generation = 0
         self._active_id = None
+        self._selected_id = None
         self._schema_version = 1
         self.group_rows = []
         layout = QVBoxLayout(self)
@@ -45,6 +47,7 @@ class APIGroupEditor(QWidget):
 
     def load_settings(self, settings: APIGroupSettings):
         self.generation += 1
+        previous_selection = self._selected_id
         self._loading = True
         try:
             self._active_id = settings.active_group_id
@@ -58,9 +61,17 @@ class APIGroupEditor(QWidget):
                 self.add_group(group)
         finally:
             self._loading = False
+        available = {row["id"] for row in self.group_rows}
+        if previous_selection in available:
+            self._selected_id = previous_selection
+        elif settings.active_group_id in available:
+            self._selected_id = settings.active_group_id
+        else:
+            self._selected_id = self.group_rows[0]["id"] if self.group_rows else None
         self._update_titles()
 
     def add_group(self, group=None):
+        is_new = group is None
         if group is None:
             group = APIGroup(str(uuid4()), "新 API 群組", "https://api.openai.com/v1", "gpt-4o-mini")
         container = QWidget()
@@ -94,9 +105,9 @@ class APIGroupEditor(QWidget):
         temperature.setRange(0, 2)
         temperature.setSingleStep(0.1)
         temperature.setValue(group.temperature)
-        ssl = QCheckBox("驗證 SSL 憑證")
+        ssl = NoWheelCheckBox("驗證 SSL 憑證")
         ssl.setChecked(group.verify_ssl)
-        mode = QComboBox()
+        mode = NoWheelComboBox()
         mode.addItem("使用 API Key", "api_key")
         mode.addItem("免金鑰連線", "none")
         mode.setCurrentIndex(mode.findData(group.auth_mode))
@@ -130,10 +141,13 @@ class APIGroupEditor(QWidget):
         test_button.clicked.connect(lambda: self.test_requested.emit(group.id, ""))
         row["display_temperature"] = temperature.value()
         self.group_rows.append(row)
+        if is_new and not self._loading:
+            self._selected_id = group.id
         self.groups_layout.addWidget(container)
         for entry in group.keys:
             self.add_key(group.id, entry)
         toggle.toggled.connect(body.setVisible)
+        toggle.clicked.connect(lambda: self.select_group(group.id))
         active_button.clicked.connect(lambda: self.set_active(group.id))
         delete_button.clicked.connect(lambda: self.confirm_delete_group(group.id))
         add_key.clicked.connect(lambda: self.add_key(group.id))
@@ -144,6 +158,16 @@ class APIGroupEditor(QWidget):
         mode.currentIndexChanged.connect(self._changed)
         self._changed()
         return row
+
+    @property
+    def selected_group_id(self):
+        return self._selected_id
+
+    def select_group(self, group_id):
+        if self.group_for_id(group_id) is None or group_id == self._selected_id:
+            return
+        self._selected_id = group_id
+        self._update_titles()
 
     def group_for_id(self, group_id):
         return next((row for row in self.group_rows if row["id"] == group_id), None)
@@ -161,7 +185,7 @@ class APIGroupEditor(QWidget):
         name = QLineEdit(entry.name)
         name.setPlaceholderText("Key 名稱")
         name.setAccessibleName("Key 名稱")
-        source = QComboBox()
+        source = NoWheelComboBox()
         source.addItem("儲存金鑰", "stored")
         source.addItem("環境變數 OPENAI_API_KEY", "environment")
         source.setCurrentIndex(source.findData(entry.source))
@@ -178,7 +202,7 @@ class APIGroupEditor(QWidget):
         priority.setSingleStep(1)
         priority.setValue(entry.priority)
         priority.setAccessibleName("Key 優先順位")
-        enabled = QCheckBox("啟用（取消即 X）")
+        enabled = NoWheelCheckBox("啟用（取消即 X）")
         enabled.setChecked(entry.enabled)
         remove = QPushButton("刪除 Key")
         remove.setObjectName("dashboardDangerButton")
@@ -262,12 +286,16 @@ class APIGroupEditor(QWidget):
         row = self.group_for_id(group_id)
         if row is None:
             return
+        index = self.group_rows.index(row)
         self.group_rows.remove(row)
         self.groups_layout.removeWidget(row["container"])
         row["container"].hide()
         row["container"].deleteLater()
         if self._active_id == group_id:
             self._active_id = None
+        if self._selected_id == group_id:
+            self._selected_id = (self.group_rows[min(index, len(self.group_rows) - 1)]["id"]
+                                 if self.group_rows else None)
         self._changed()
 
     def collect_settings(self):
@@ -317,9 +345,13 @@ class APIGroupEditor(QWidget):
         settings = self.collect_settings()
         for row, group in zip(self.group_rows, settings.groups):
             active = row["id"] == self._active_id
+            selected = row["id"] == self._selected_id
             enabled_count = sum(entry.enabled for entry in group.keys)
             mode = "免金鑰" if row["mode"].currentData() == "none" else f"啟用 Key：{enabled_count}"
-            row["toggle"].setText(f"{row['name'].text().strip() or '未命名'} · {mode}" + (" · 目前群組" if active else ""))
+            row["toggle"].setText(f"{row['name'].text().strip() or '未命名'} · {mode}"
+                                  + (" · 目前群組" if active else "")
+                                  + (" · 編輯中" if selected else ""))
+            row["container"].setProperty("editingSelected", selected)
             row["active_button"].setEnabled(not active)
             none = group.auth_mode == "none"
             row["test_button"].setVisible(none)

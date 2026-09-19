@@ -218,6 +218,29 @@ class DashboardAPIGroupTests(unittest.TestCase):
         self.assertEqual(self.window._draft_groups.active_group_id, row["id"])
         self.assertFalse(self.path.exists())
 
+    def test_editing_selection_is_separate_from_active_group(self):
+        active = self.editor.collect_settings().active_group_id
+        added = self.editor.add_group()
+        self.assertEqual(self.editor.selected_group_id, added["id"])
+        self.assertEqual(self.editor.collect_settings().active_group_id, active)
+        self.assertIn("編輯中", added["toggle"].text())
+        draft = self.editor.collect_settings()
+        first = self.editor.group_rows[0]
+        first["toggle"].click()
+        self.assertEqual(self.editor.selected_group_id, first["id"])
+        self.assertEqual(self.editor.collect_settings().active_group_id, active)
+        self.assertEqual(self.editor.collect_settings(), draft)
+
+    def test_editing_selection_survives_reload_and_moves_after_delete(self):
+        first = self.editor.group_rows[0]
+        second = self.editor.add_group()
+        settings = self.editor.collect_settings()
+        self.editor.load_settings(settings)
+        self.assertEqual(self.editor.selected_group_id, second["id"])
+        self.editor.remove_group(second["id"])
+        self.assertEqual(self.editor.selected_group_id, first["id"])
+        self.assertEqual(self.editor.collect_settings().active_group_id, first["id"])
+
     def test_collapsing_and_revealing_do_not_dirty(self):
         row = self.editor.group_rows[0]
         row["toggle"].click()

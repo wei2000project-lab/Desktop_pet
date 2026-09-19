@@ -3,12 +3,14 @@ from PySide6.QtCore import Signal
 from PySide6.QtWidgets import (
     QAbstractSpinBox, QDoubleSpinBox, QHBoxLayout, QPushButton, QSpinBox, QWidget,
 )
+from ui.dashboard.input_controls import finish_input
 
 
 class _NumberInput(QWidget):
     def _setup(self, editor):
         self.editor = editor
         editor.setButtonSymbols(QAbstractSpinBox.NoButtons)
+        editor.setKeyboardTracking(False)
         self.setFocusProxy(editor)
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -23,11 +25,16 @@ class _NumberInput(QWidget):
         layout.addWidget(self.minus_button)
         layout.addWidget(editor, 1)
         layout.addWidget(self.plus_button)
-        self.minus_button.clicked.connect(editor.stepDown)
-        self.plus_button.clicked.connect(editor.stepUp)
+        self.minus_button.clicked.connect(lambda: self._step(-1))
+        self.plus_button.clicked.connect(lambda: self._step(1))
         editor.valueChanged.connect(self.valueChanged)
         editor.valueChanged.connect(self._update_buttons)
         self._update_buttons()
+
+    def _step(self, amount):
+        self.editor.interpretText()
+        self.editor.stepBy(amount)
+        finish_input(self.editor)
 
     def _update_buttons(self, *_args):
         self.minus_button.setEnabled(self.value() > self.minimum())

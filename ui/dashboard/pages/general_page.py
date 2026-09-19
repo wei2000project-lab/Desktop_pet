@@ -1,12 +1,12 @@
 from PySide6.QtCore import Signal
 from PySide6.QtWidgets import (
-    QCheckBox,
     QLabel,
     QPushButton,
     QScrollArea,
     QVBoxLayout,
     QWidget,
 )
+from ui.dashboard.input_controls import FocusClearingWidget, NoWheelCheckBox
 
 from app.settings import SettingsSnapshot
 
@@ -20,7 +20,7 @@ class GeneralPage(QScrollArea):
         self.setWidgetResizable(True)
         self.setFrameShape(QScrollArea.NoFrame)
 
-        content = QWidget()
+        content = FocusClearingWidget()
         content.setObjectName("dashboardPageContent")
         layout = QVBoxLayout(content)
         layout.setContentsMargins(32, 28, 32, 28)
@@ -46,7 +46,7 @@ class GeneralPage(QScrollArea):
         window_title.setObjectName("dashboardSectionTitle")
         window_layout.addWidget(window_title)
 
-        self.always_on_top_check = QCheckBox("視窗永遠置頂")
+        self.always_on_top_check = NoWheelCheckBox("視窗永遠置頂")
         self.always_on_top_check.setToolTip("讓桌寵保持在其他視窗上方")
         self.always_on_top_check.toggled.connect(self.settings_changed)
         window_layout.addWidget(self.always_on_top_check)

@@ -104,6 +104,7 @@ Desktop Pet（版本控制檔案；包含本次待提交的新檔，不含執行
 │       └── prompt.json
 ├── tests
 │   ├── test_dashboard_api_groups.py
+│   ├── test_dashboard_input_controls.py
 │   ├── test_api_group_resolver.py
 │   ├── test_api_group_runtime.py
 │   ├── test_ai_client.py
@@ -146,6 +147,7 @@ Desktop Pet（版本控制檔案；包含本次待提交的新檔，不含執行
 ├── ui
 │   ├── dashboard
 │   │   ├── api_group_editor.py
+│   │   ├── input_controls.py
 │   │   ├── pages
 │   │   │   ├── __init__.py
 │   │   │   ├── ai_page.py
