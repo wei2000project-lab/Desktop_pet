@@ -1,6 +1,8 @@
 """Dashboard controls whose values change only through deliberate input."""
+from PySide6.QtCore import QRectF, QSize, Qt
+from PySide6.QtGui import QColor, QPainter, QPen
 from PySide6.QtWidgets import (
-    QApplication, QAbstractSpinBox, QCheckBox, QComboBox,
+    QApplication, QAbstractButton, QAbstractSpinBox, QCheckBox, QComboBox,
     QLineEdit, QPlainTextEdit, QTextEdit, QWidget,
 )
 
@@ -57,3 +59,34 @@ class NoWheelComboBox(QComboBox):
 
 class NoWheelCheckBox(QCheckBox):
     """Semantic type; DashboardWindow owns its Wheel policy."""
+
+
+class ToggleSwitch(QAbstractButton):
+    """Compact, keyboard-accessible on/off control for Dashboard settings."""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setCheckable(True)
+        self.setCursor(Qt.PointingHandCursor)
+        self.setFixedSize(46, 26)
+
+    def sizeHint(self):
+        return QSize(46, 26)
+
+    def paintEvent(self, _event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+        enabled = self.isEnabled()
+        track = QColor("#7b4ba0" if self.isChecked() else "#aaa4b0")
+        if not enabled:
+            track.setAlpha(110)
+        painter.setPen(Qt.NoPen)
+        painter.setBrush(track)
+        painter.drawRoundedRect(QRectF(1, 3, 44, 20), 10, 10)
+        knob_x = 24 if self.isChecked() else 4
+        painter.setBrush(QColor("#ffffff"))
+        painter.drawEllipse(QRectF(knob_x, 5, 16, 16))
+        if self.hasFocus():
+            painter.setBrush(Qt.NoBrush)
+            painter.setPen(QPen(QColor("#5f2d82"), 2))
+            painter.drawRoundedRect(QRectF(1, 1, 44, 24), 12, 12)

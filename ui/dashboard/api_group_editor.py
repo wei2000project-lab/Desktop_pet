@@ -12,8 +12,8 @@ from PySide6.QtWidgets import (
 from app.settings.api_groups import APIGroup, APIGroupKey, APIGroupSettings
 from app.settings.api_group_resolver import APIGroupResolutionError, resolve_api_request
 from app.settings.model import SettingsValidationError
-from ui.dashboard.number_input import DecimalInput, IntegerInput
-from ui.dashboard.input_controls import NoWheelCheckBox, NoWheelComboBox
+from ui.dashboard.number_input import DecimalInput
+from ui.dashboard.input_controls import NoWheelCheckBox, NoWheelComboBox, ToggleSwitch
 
 
 class APIGroupEditor(QWidget):
@@ -317,10 +317,10 @@ class APIGroupEditor(QWidget):
         key_fields.setContentsMargins(0, 0, 0, 0)
         key_fields.addWidget(key, 1)
         key_fields.addWidget(show)
-        priority = IntegerInput()
-        priority.setRange(1, 10)
-        priority.setSingleStep(1)
-        priority.setValue(entry.priority)
+        priority = NoWheelComboBox()
+        for value in range(1, 11):
+            priority.addItem(str(value), value)
+        priority.setCurrentIndex(priority.findData(entry.priority))
         priority.setAccessibleName("Key 優先順位")
         priority_widget = QWidget()
         priority_fields = QHBoxLayout(priority_widget)
@@ -328,8 +328,17 @@ class APIGroupEditor(QWidget):
         priority_fields.setSpacing(6)
         priority_fields.addWidget(QLabel("順位"))
         priority_fields.addWidget(priority)
-        enabled = NoWheelCheckBox("啟用（取消即 X）")
+        enabled = ToggleSwitch()
+        enabled.setAccessibleName("啟用 Key")
+        enabled.setToolTip("切換此 Key 是否參與正式請求")
         enabled.setChecked(entry.enabled)
+        enabled_text = QLabel()
+        enabled_widget = QWidget()
+        enabled_fields = QHBoxLayout(enabled_widget)
+        enabled_fields.setContentsMargins(0, 0, 0, 0)
+        enabled_fields.setSpacing(7)
+        enabled_fields.addWidget(enabled)
+        enabled_fields.addWidget(enabled_text)
         more = QPushButton("⋯")
         more.setAccessibleName("Key 其他操作")
         more.setToolTip("其他操作")
@@ -361,7 +370,8 @@ class APIGroupEditor(QWidget):
         extra_layout.addRow("", status)
         extra_body.hide()
         row = {"id": entry.id, "container": container, "name": name, "source": source,
-               "key": key, "show": show, "priority": priority, "enabled": enabled, "status": status,
+               "key": key, "show": show, "priority": priority, "enabled": enabled,
+               "enabled_text": enabled_text, "enabled_widget": enabled_widget, "status": status,
                "more": more, "delete_action": delete_action, "layout": layout,
                "key_widget": key_widget, "priority_widget": priority_widget,
                "actions_widget": actions_widget,
@@ -381,6 +391,7 @@ class APIGroupEditor(QWidget):
                 show.setChecked(False)
             available = bool(os.environ.get("OPENAI_API_KEY", "").strip()) if not is_stored else False
             source_badge.setVisible(not is_stored)
+            enabled_text.setText("啟用中" if enabled.isChecked() else "已停用")
             status.setText(("環境來源已設定（不顯示或保存內容）" if available else "環境來源尚無值") if not is_stored
                            else ("啟用" if enabled.isChecked() else "X：已暫停，原順位保留"))
             self._changed()
@@ -395,7 +406,7 @@ class APIGroupEditor(QWidget):
         )
         for control in (name, key):
             control.textChanged.connect(self._changed)
-        priority.valueChanged.connect(self._changed)
+        priority.currentIndexChanged.connect(self._changed)
         enabled.toggled.connect(update_source)
         source.currentIndexChanged.connect(update_source)
         delete_action.triggered.connect(lambda: self.remove_key(group_id, entry.id))
@@ -509,7 +520,7 @@ class APIGroupEditor(QWidget):
             layout.takeAt(0)
         if narrow:
             for line, widget in enumerate((row["name"], row["source_badge"], row["key_widget"],
-                                           row["priority_widget"], row["enabled"], row["actions_widget"],
+                                           row["priority_widget"], row["enabled_widget"], row["actions_widget"],
                                            row["extra_body"], row["test_status"])):
                 layout.addWidget(widget, line, 0)
             layout.setColumnStretch(0, 1)
@@ -518,7 +529,7 @@ class APIGroupEditor(QWidget):
         else:
             layout.addWidget(row["name"], 0, 0)
             layout.addWidget(row["source_badge"], 0, 1)
-            layout.addWidget(row["enabled"], 0, 2)
+            layout.addWidget(row["enabled_widget"], 0, 2)
             layout.addWidget(row["key_widget"], 1, 0, 1, 2)
             layout.addWidget(row["priority_widget"], 1, 2)
             layout.addWidget(row["actions_widget"], 2, 2)
@@ -538,7 +549,7 @@ class APIGroupEditor(QWidget):
                 if source == "stored" and not value:
                     continue
                 keys.append(APIGroupKey(entry["id"], entry["name"].text().strip() or f"Key {len(keys) + 1}",
-                                        value, entry["priority"].value(), entry["enabled"].isChecked(), source,
+                                        value, entry["priority"].currentData(), entry["enabled"].isChecked(), source,
                                         "OPENAI_API_KEY" if source == "environment" else ""))
             groups.append(APIGroup(row["id"], row["name"].text().strip(), row["url"].text().strip(),
                                    row["model"].text().strip(),
@@ -550,8 +561,6 @@ class APIGroupEditor(QWidget):
     def commit_pending_input(self):
         for group in self.group_rows:
             group["temperature"].interpretText()
-            for entry in group["keys"]:
-                entry["priority"].interpretText()
 
     def test_row(self, group_id, key_id):
         group = self.group_for_id(group_id)

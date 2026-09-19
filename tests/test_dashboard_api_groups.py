@@ -17,6 +17,7 @@ from app.core.config_manager import ConfigManager
 from app.settings import APIGroupService, SettingsService
 from app.settings.api_groups import serialize_api_groups, validate_api_groups
 from ui.dashboard import DashboardWindow
+from ui.dashboard.input_controls import NoWheelComboBox, ToggleSwitch
 from tests.test_dashboard_api_keys import FakePool, FakeWorker
 from app.ai.client import AIClient
 
@@ -336,13 +337,29 @@ class DashboardAPIGroupTests(unittest.TestCase):
 
     def test_priority_and_x_keep_previous_priority(self):
         key = self.editor.group_rows[0]["keys"][0]
-        key["priority"].setValue(5)
+        key["priority"].setCurrentIndex(key["priority"].findData(5))
         key["enabled"].setChecked(False)
         settings = self.editor.collect_settings()
         self.assertFalse(settings.groups[0].keys[0].enabled)
         self.assertEqual(settings.groups[0].keys[0].priority, 5)
         key["enabled"].setChecked(True)
         self.assertEqual(self.editor.collect_settings().groups[0].keys[0].priority, 5)
+
+    def test_key_priority_dropdown_and_toggle_switch(self):
+        key = self.editor.group_rows[0]["keys"][0]
+        self.assertIsInstance(key["priority"], NoWheelComboBox)
+        self.assertEqual(
+            [key["priority"].itemData(index) for index in range(key["priority"].count())],
+            list(range(1, 11)),
+        )
+        self.assertIsInstance(key["enabled"], ToggleSwitch)
+        initial = key["enabled"].isChecked()
+        QTest.mouseClick(key["enabled"], Qt.LeftButton)
+        self.assertNotEqual(key["enabled"].isChecked(), initial)
+        self.assertEqual(
+            key["enabled_text"].text(),
+            "啟用中" if key["enabled"].isChecked() else "已停用",
+        )
 
     def test_unavailable_active_group_is_clearly_marked(self):
         key = self.editor.group_rows[0]["keys"][0]
@@ -485,13 +502,13 @@ class DashboardAPIGroupTests(unittest.TestCase):
         self.window.resize(650, 600)
         self.window.select_page("ai")
         row = self.editor.group_rows[0]
-        for control in (row["temperature"], row["keys"][0]["priority"]):
-            self.window.ai_page.ensureWidgetVisible(control)
-            self.app.processEvents()
-            initial = control.value()
-            self.assertFalse(control.editor.geometry().intersects(control.plus_button.geometry()))
-            QTest.mouseClick(control.plus_button, Qt.LeftButton)
-            self.assertAlmostEqual(control.value(), initial + control.singleStep())
+        control = row["temperature"]
+        self.window.ai_page.ensureWidgetVisible(control)
+        self.app.processEvents()
+        initial = control.value()
+        self.assertFalse(control.editor.geometry().intersects(control.plus_button.geometry()))
+        QTest.mouseClick(control.plus_button, Qt.LeftButton)
+        self.assertAlmostEqual(control.value(), initial + control.singleStep())
 
 
 if __name__ == "__main__":
