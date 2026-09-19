@@ -226,10 +226,31 @@ class DashboardAPIGroupTests(unittest.TestCase):
         self.assertIn("編輯中", added["toggle"].text())
         draft = self.editor.collect_settings()
         first = self.editor.group_rows[0]
-        first["toggle"].click()
+        first["list_button"].click()
         self.assertEqual(self.editor.selected_group_id, first["id"])
         self.assertEqual(self.editor.collect_settings().active_group_id, active)
         self.assertEqual(self.editor.collect_settings(), draft)
+
+    def test_master_detail_shows_only_selected_group_and_keeps_drafts(self):
+        first = self.editor.group_rows[0]
+        second = self.editor.add_group()
+        second["model"].setText("second-draft-model")
+        self.assertIs(self.editor.detail_stack.currentWidget(), second["container"])
+        self.assertTrue(second["list_button"].isChecked())
+        first["list_button"].click()
+        self.assertIs(self.editor.detail_stack.currentWidget(), first["container"])
+        self.assertFalse(second["list_button"].isChecked())
+        second["list_button"].click()
+        self.assertEqual(second["model"].text(), "second-draft-model")
+
+    def test_complete_chat_endpoint_is_explained_and_blocks_apply(self):
+        row = self.editor.group_rows[0]
+        row["url"].setText("https://example.test/v1/chat/completions/")
+        self.assertIn("請移除", row["url_note"].text())
+        with patch("ui.dashboard.dashboard_window.QMessageBox.warning") as warning:
+            self.assertFalse(self.window.apply_changes())
+        self.assertIn("不要包含 /chat/completions", warning.call_args.args[2])
+        self.assertTrue(self.window.is_dirty)
 
     def test_editing_selection_survives_reload_and_moves_after_delete(self):
         first = self.editor.group_rows[0]

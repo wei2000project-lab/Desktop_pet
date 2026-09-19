@@ -233,6 +233,8 @@ class DashboardWindow(QMainWindow):
             self.ai_page.group_editor.commit_pending_input()
         group_changed = self._draft_groups != self._original_groups
         try:
+            if self.ai_page is not None and self.group_backend is not None:
+                self.ai_page.group_editor.validate_draft()
             if group_changed:
                 validate_api_groups(self._draft_groups)
                 saved = self.settings_backend.save(self._draft_snapshot, api_groups=self._draft_groups,
@@ -450,6 +452,30 @@ class DashboardWindow(QMainWindow):
                 background-color: #faf9fb;
                 border: 1px solid #e2dfe6;
                 border-radius: 10px;
+            }
+            #dashboardApiGroupList {
+                background-color: #f7f5f9;
+                border: 1px solid #ded8e4;
+                border-radius: 10px;
+            }
+            QPushButton#dashboardApiGroupButton {
+                background-color: transparent;
+                border: 1px solid transparent;
+                border-radius: 8px;
+                color: #514b59;
+                padding: 8px 10px;
+                text-align: left;
+            }
+            QPushButton#dashboardApiGroupButton:hover,
+            QPushButton#dashboardApiGroupButton:focus {
+                background-color: #efebf3;
+                border-color: #d8cfdf;
+            }
+            QPushButton#dashboardApiGroupButton:checked {
+                background-color: #eadcf5;
+                border-color: #9b69bd;
+                color: #51276d;
+                font-weight: 600;
             }
             #dashboardSectionTitle {
                 color: #2e2932;
