@@ -5,7 +5,7 @@ from urllib.parse import urlsplit
 
 from PySide6.QtCore import Signal, Qt
 from PySide6.QtWidgets import (
-    QFormLayout, QHBoxLayout, QLabel, QLineEdit,
+    QFormLayout, QGridLayout, QHBoxLayout, QLabel, QLineEdit, QMenu,
     QMessageBox, QPushButton, QStackedWidget, QVBoxLayout, QWidget, QSizePolicy,
 )
 
@@ -168,10 +168,16 @@ class APIGroupEditor(QWidget):
         test_status.setWordWrap(True)
         body_layout.addWidget(test_button)
         body_layout.addWidget(test_status)
-        key_layout = QVBoxLayout()
-        body_layout.addLayout(key_layout)
+        key_header = QHBoxLayout()
+        key_count = QLabel()
+        key_count.setObjectName("dashboardSectionTitle")
+        key_header.addWidget(key_count, 1)
         add_key = QPushButton("新增 Key")
-        body_layout.addWidget(add_key)
+        key_header.addWidget(add_key)
+        body_layout.addLayout(key_header)
+        key_layout = QVBoxLayout()
+        key_layout.setSpacing(8)
+        body_layout.addLayout(key_layout)
         key_note = QLabel("X 表示暫停自動使用；免金鑰模式不會使用任何 Key，但會保留列表。")
         key_note.setObjectName("dashboardPageDescription")
         key_note.setWordWrap(True)
@@ -181,7 +187,7 @@ class APIGroupEditor(QWidget):
                "name": name, "url": url, "model": model, "temperature": temperature,
                "ssl": ssl, "mode": mode, "keys": [], "key_layout": key_layout,
                "active_button": active_button, "delete_button": delete_button, "add_key": add_key,
-               "list_button": list_button, "url_note": url_note}
+               "list_button": list_button, "url_note": url_note, "key_count": key_count}
         row["original_temperature"] = group.temperature
         row.update(test_button=test_button, test_status=test_status, testing=False)
         test_button.clicked.connect(lambda: self.test_requested.emit(group.id, ""))
@@ -226,10 +232,11 @@ class APIGroupEditor(QWidget):
             return
         entry = entry or APIGroupKey(str(uuid4()), "", "")
         container = QWidget()
-        layout = QVBoxLayout(container)
-        layout.setContentsMargins(0, 6, 0, 6)
-        fields = QFormLayout()
-        fields.setRowWrapPolicy(QFormLayout.WrapLongRows)
+        container.setObjectName("dashboardApiKeyRow")
+        layout = QGridLayout(container)
+        layout.setContentsMargins(12, 10, 12, 10)
+        layout.setHorizontalSpacing(10)
+        layout.setVerticalSpacing(7)
         name = QLineEdit(entry.name)
         name.setPlaceholderText("Key 名稱")
         name.setAccessibleName("Key 名稱")
@@ -252,27 +259,38 @@ class APIGroupEditor(QWidget):
         priority.setAccessibleName("Key 優先順位")
         enabled = NoWheelCheckBox("啟用（取消即 X）")
         enabled.setChecked(entry.enabled)
-        remove = QPushButton("刪除 Key")
-        remove.setObjectName("dashboardDangerButton")
+        more = QPushButton("⋯")
+        more.setAccessibleName("Key 其他操作")
+        more.setToolTip("其他操作")
+        more.setFixedWidth(42)
+        menu = QMenu(more)
+        delete_action = menu.addAction("刪除 Key")
+        more.setMenu(menu)
         status = QLabel()
         status.setObjectName("dashboardPageDescription")
         status.setWordWrap(True)
-        fields.addRow("名稱：", name)
-        fields.addRow("來源：", source)
-        fields.addRow("金鑰：", key_fields)
-        fields.addRow("順位：", priority)
-        fields.addRow(enabled)
-        layout.addLayout(fields)
-        layout.addWidget(status)
         test_button = QPushButton("測試此 Key")
         test_status = QLabel()
         test_status.setTextFormat(Qt.PlainText)
         test_status.setWordWrap(True)
-        layout.addWidget(test_button)
-        layout.addWidget(test_status)
-        layout.addWidget(remove)
+        test_status.hide()
+        actions = QHBoxLayout()
+        actions.addWidget(test_button)
+        actions.addWidget(more)
+        layout.addWidget(name, 0, 0)
+        layout.addWidget(source, 0, 1)
+        layout.addWidget(enabled, 0, 2)
+        layout.addLayout(key_fields, 1, 0, 1, 2)
+        layout.addWidget(priority, 1, 2)
+        layout.addWidget(status, 2, 0, 1, 2)
+        layout.addLayout(actions, 2, 2)
+        layout.addWidget(test_status, 3, 0, 1, 3)
+        layout.setColumnStretch(0, 2)
+        layout.setColumnStretch(1, 2)
+        layout.setColumnStretch(2, 1)
         row = {"id": entry.id, "container": container, "name": name, "source": source,
-               "key": key, "show": show, "priority": priority, "enabled": enabled, "status": status}
+               "key": key, "show": show, "priority": priority, "enabled": enabled, "status": status,
+               "more": more, "delete_action": delete_action}
         group["keys"].append(row)
         row.update(test_button=test_button, test_status=test_status, testing=False)
         test_button.clicked.connect(lambda: self.test_requested.emit(group_id, entry.id))
@@ -299,7 +317,7 @@ class APIGroupEditor(QWidget):
         priority.valueChanged.connect(self._changed)
         enabled.toggled.connect(update_source)
         source.currentIndexChanged.connect(update_source)
-        remove.clicked.connect(lambda: self.remove_key(group_id, entry.id))
+        delete_action.triggered.connect(lambda: self.remove_key(group_id, entry.id))
         update_source()
         return row
 
@@ -402,6 +420,7 @@ class APIGroupEditor(QWidget):
         if row is not None:
             row["testing"] = testing
             row["test_status"].setText(message)
+            row["test_status"].setVisible(bool(message))
             self._update_titles()
 
     def _changed(self, *_args):
@@ -435,7 +454,10 @@ class APIGroupEditor(QWidget):
             none = group.auth_mode == "none"
             row["test_button"].setVisible(none)
             row["test_button"].setEnabled(none and not row["testing"])
+            row["add_key"].setEnabled(not none)
+            row["key_count"].setText(f"API Keys（{len(row['keys'])}）")
             for entry in row["keys"]:
+                entry["container"].setEnabled(not none and not entry["testing"])
                 entry["test_button"].setEnabled(not none and not entry["testing"])
         selected_row = self.group_for_id(self._selected_id)
         self.detail_stack.setCurrentWidget(selected_row["container"] if selected_row else self.empty_detail)

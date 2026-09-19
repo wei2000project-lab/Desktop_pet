@@ -477,6 +477,11 @@ class DashboardWindow(QMainWindow):
                 color: #51276d;
                 font-weight: 600;
             }
+            #dashboardApiKeyRow {
+                background-color: #ffffff;
+                border: 1px solid #ded8e4;
+                border-radius: 9px;
+            }
             #dashboardSectionTitle {
                 color: #2e2932;
                 font-size: 16px;

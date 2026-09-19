@@ -11,7 +11,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QCloseEvent
 from PySide6.QtTest import QTest
-from PySide6.QtWidgets import QApplication, QLineEdit, QMessageBox
+from PySide6.QtWidgets import QApplication, QGridLayout, QLineEdit, QMessageBox
 
 from app.core.config_manager import ConfigManager
 from app.settings import APIGroupService, SettingsService
@@ -79,11 +79,13 @@ class DashboardAPIGroupTests(unittest.TestCase):
         self.assertEqual(controller.pool.workers[0].inputs,
                          ("https://example.test/v1", "fake-stored-key", "old-model", False))
         self.assertFalse(row["test_button"].isEnabled())
+        self.assertFalse(row["name"].isEnabled())
         self.assertFalse(self.path.exists())
         self.assertFalse(self.window.is_dirty)
         controller.pool.workers[0].finish()
         self.assertEqual(row["test_status"].text(), "連線測試成功。")
         self.assertTrue(row["test_button"].isEnabled())
+        self.assertTrue(row["name"].isEnabled())
 
     def test_group_check_ignores_changed_draft(self):
         controller, group, row = self.start_test()
@@ -297,9 +299,22 @@ class DashboardAPIGroupTests(unittest.TestCase):
         self.assertEqual(self.editor.collect_settings().groups[0].temperature, 0.75)
 
     def test_blank_new_key_row_is_not_persisted_or_dirty(self):
-        self.editor.add_key(self.editor.group_rows[0]["id"])
+        group = self.editor.group_rows[0]
+        self.editor.add_key(group["id"])
         self.assertFalse(self.window.is_dirty)
         self.assertEqual(len(self.editor.collect_settings().groups[0].keys), 1)
+        self.assertEqual(group["key_count"].text(), "API Keys（2）")
+
+    def test_key_uses_compact_grid_and_delete_menu(self):
+        group = self.editor.group_rows[0]
+        key = self.editor.add_key(group["id"])
+        key["key"].setText("synthetic-second-key")
+        self.assertIsInstance(key["container"].layout(), QGridLayout)
+        self.assertTrue(key["more"].menu() is not None)
+        self.assertEqual(group["key_count"].text(), "API Keys（2）")
+        key["delete_action"].trigger()
+        self.assertEqual(len(group["keys"]), 1)
+        self.assertEqual(group["key_count"].text(), "API Keys（1）")
 
     def test_environment_reference_does_not_display_or_save_environment_secret(self):
         group = self.editor.group_rows[0]
@@ -321,6 +336,11 @@ class DashboardAPIGroupTests(unittest.TestCase):
         settings = self.editor.collect_settings()
         self.assertEqual(settings.groups[0].auth_mode, "none")
         self.assertEqual(settings.groups[0].keys[0].key, "fake-stored-key")
+        self.assertFalse(row["add_key"].isEnabled())
+        self.assertFalse(row["keys"][0]["container"].isEnabled())
+        row["mode"].setCurrentIndex(0)
+        self.assertTrue(row["add_key"].isEnabled())
+        self.assertTrue(row["keys"][0]["container"].isEnabled())
 
     def test_delete_active_group_requires_confirmation_and_becomes_unconfigured(self):
         row = self.editor.group_rows[0]
