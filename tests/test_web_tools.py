@@ -1,4 +1,5 @@
 import unittest
+from unittest.mock import Mock
 
 from app.web.context import WebContextBuilder
 from app.web.decision import WebSearchDecision, WebSearchDecider
@@ -6,6 +7,8 @@ from app.web.extractor import WebPageExtractor
 from app.web.search import WebSearchProvider
 from app.web.search import WebSearchResult
 from app.web.service import WebToolService
+from app.settings.api_group_resolver import resolve_api_request
+from tests.test_api_groups import sample_settings
 
 
 class WebToolsTests(unittest.TestCase):
@@ -155,7 +158,9 @@ class WebToolsTests(unittest.TestCase):
         search_provider = SearchProvider()
         service = WebToolService(search_provider=search_provider)
 
-        context = service.build_context_if_needed("你好，隨便聊聊", "", "", "", True)
+        context = service.build_context_if_needed(
+            "你好，隨便聊聊", resolve_api_request(sample_settings())
+        )
 
         self.assertEqual(context, "")
         self.assertFalse(search_provider.called)
@@ -174,14 +179,45 @@ class WebToolsTests(unittest.TestCase):
                     raise RuntimeError("boom")
                 return "正文第一句有重點。正文第二句補充。"
 
-        service = WebToolService(search_provider=SearchProvider(), extractor=Extractor())
+        executor_factory = Mock()
+        executor_factory.return_value.execute.return_value = (
+            '{"should_search": true, "query": "最新測試資料", "reason": "最新資訊"}'
+        )
+        service = WebToolService(
+            search_provider=SearchProvider(),
+            extractor=Extractor(),
+            executor_factory=executor_factory,
+        )
 
-        context = service.build_context_if_needed("幫我查最新測試資料", "", "", "", True)
+        context = service.build_context_if_needed(
+            "幫我查最新測試資料", resolve_api_request(sample_settings())
+        )
 
         self.assertIn("網路查詢摘要", context)
         self.assertIn("Good Page", context)
         self.assertIn("Bad Page", context)
         self.assertIn("bad snippet", context)
+
+    def test_service_does_not_search_after_decision_is_cancelled(self):
+        search_provider = Mock()
+        executor_factory = Mock()
+        executor_factory.return_value.execute.return_value = (
+            '{"should_search": true, "query": "最新測試資料", "reason": "最新資訊"}'
+        )
+        service = WebToolService(
+            search_provider=search_provider,
+            executor_factory=executor_factory,
+        )
+        cancelled = Mock(side_effect=(False, True))
+
+        context = service.build_context_if_needed(
+            "幫我查最新測試資料",
+            resolve_api_request(sample_settings()),
+            should_cancel=cancelled,
+        )
+
+        self.assertEqual(context, "")
+        search_provider.search.assert_not_called()
 
 
 if __name__ == "__main__":

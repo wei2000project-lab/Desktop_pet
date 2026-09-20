@@ -243,19 +243,14 @@ class AppOpenRequestHandler:
 
 
 def _complete_with_ai_client(messages):
-    from app.ai.client import AIClient
+    from app.ai.request_executor import AIRequestExecutor, RequestExecutionLimits
     from app.settings import APIGroupService
 
     snapshot = APIGroupService().resolve_runtime_request()
-
-    client = AIClient(
-        base_url=snapshot.base_url,
-        api_key=snapshot.api_key,
-        model=snapshot.model,
-        verify_ssl=snapshot.verify_ssl,
-        timeout=60.0,
+    executor = AIRequestExecutor(
+        limits=RequestExecutionLimits(operation_timeout=30.0)
     )
-    return client.request_completion(messages=messages, temperature=snapshot.temperature, max_chars=800)
+    return executor.execute(snapshot, messages, max_chars=800)
 
 
 def _selection_error_message(error: str) -> str:

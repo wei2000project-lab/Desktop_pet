@@ -62,30 +62,44 @@ class RuntimeGroupTests(unittest.TestCase):
 
     def test_app_selection_uses_snapshot(self):
         snapshot = resolve_api_request(sample_settings())
-        with patch("app.settings.APIGroupService") as backend, patch("app.ai.client.AIClient") as client:
+        with patch("app.settings.APIGroupService") as backend, patch(
+            "app.ai.request_executor.AIRequestExecutor"
+        ) as executor:
             backend.return_value.resolve_runtime_request.return_value = snapshot
-            client.return_value.request_completion.return_value = "selection"
+            executor.return_value.execute.return_value = "selection"
             self.assertEqual(_complete_with_ai_client([{"role": "user", "content": "test"}]), "selection")
-        self.assertEqual(client.call_args.kwargs["base_url"], snapshot.base_url)
-        self.assertEqual(client.call_args.kwargs["api_key"], snapshot.api_key)
-        self.assertEqual(client.return_value.request_completion.call_args.kwargs["temperature"], snapshot.temperature)
+        limits = executor.call_args.kwargs["limits"]
+        self.assertEqual(limits.operation_timeout, 30.0)
+        call = executor.return_value.execute.call_args
+        self.assertIs(call.args[0], snapshot)
+        self.assertEqual(call.kwargs["max_chars"], 800)
 
     def test_app_selection_none_mode_uses_real_client(self):
         settings = sample_settings()
         snapshot = resolve_api_request(replace(settings, groups=(replace(settings.groups[0], auth_mode="none"),)))
-        with patch("app.settings.APIGroupService") as backend, patch("app.ai.client.AIClient") as client:
+        with patch("app.settings.APIGroupService") as backend, patch(
+            "app.ai.request_executor.AIRequestExecutor"
+        ) as executor:
             backend.return_value.resolve_runtime_request.return_value = snapshot
             _complete_with_ai_client([])
-        self.assertIsNone(client.call_args.kwargs["api_key"])
-        client.return_value.request_completion.assert_called_once()
+        self.assertIs(executor.return_value.execute.call_args.args[0], snapshot)
+        executor.return_value.execute.assert_called_once()
 
     def test_web_decision_none_mode_calls_client(self):
-        service = WebToolService()
-        with patch("app.ai.client.AIClient") as client:
-            client.return_value.request_completion.return_value = '{"should_search": false, "query": "", "reason": "test"}'
-            service._decide("最新資料", "http://localhost:8080/v1", None, "local", True, None)
-        self.assertIsNone(client.call_args.args[1])
-        client.return_value.request_completion.assert_called_once()
+        settings = sample_settings()
+        snapshot = resolve_api_request(replace(settings, groups=(replace(settings.groups[0], auth_mode="none"),)))
+        executor_factory = Mock()
+        executor_factory.return_value.execute.return_value = (
+            '{"should_search": false, "query": "", "reason": "test"}'
+        )
+        service = WebToolService(executor_factory=executor_factory)
+
+        service._decide("最新資料", snapshot, None)
+
+        self.assertEqual(executor_factory.call_args.kwargs["limits"].operation_timeout, 20.0)
+        call = executor_factory.return_value.execute.call_args
+        self.assertEqual(call.args[0].auth_mode, "none")
+        self.assertEqual(call.args[0].temperature, 0.0)
 
 
 class ConversationGroupTests(unittest.TestCase):
@@ -116,21 +130,19 @@ class ConversationGroupTests(unittest.TestCase):
         self.backend.resolve_runtime_request.return_value = replace(self.snapshot, base_url="https://other.test/v1", model="other")
         self.pending.pop(0)()
         request = self.manager.provider.request.call_args.kwargs
-        self.assertEqual((request["api_url"], request["model"], request["api_key"]),
-                         (self.snapshot.base_url, self.snapshot.model, self.snapshot.api_key))
+        self.assertIs(request["snapshot"], self.snapshot)
         web = self.manager.web_tool.build_context_if_needed.call_args.kwargs
-        self.assertEqual(web["api_url"], request["api_url"])
-        self.assertEqual(web["api_key"], request["api_key"])
+        self.assertIs(web["snapshot"], request["snapshot"])
         self.manager.on_api_error("synthetic-error")
         self.manager.handle_user_message("下一輪")
         self.pending.pop(0)()
-        self.assertEqual(self.manager.provider.request.call_args.kwargs["model"], "other")
+        self.assertEqual(self.manager.provider.request.call_args.kwargs["snapshot"].model, "other")
 
     def test_none_mode_does_not_simulate(self):
         self.backend.resolve_runtime_request.return_value = replace(self.snapshot, auth_mode="none", candidates=())
         self.manager.handle_user_message("你好")
         self.pending.pop(0)()
-        self.assertIsNone(self.manager.provider.request.call_args.kwargs["api_key"])
+        self.assertEqual(self.manager.provider.request.call_args.kwargs["snapshot"].auth_mode, "none")
 
     def test_unconfigured_releases_wait_state_and_no_request(self):
         self.backend.resolve_runtime_request.side_effect = SettingsValidationError("尚未設定群組")
@@ -163,18 +175,19 @@ class ConversationGroupTests(unittest.TestCase):
 
 class ProviderCancellationTests(unittest.TestCase):
     def test_new_request_does_not_clear_old_cancellation(self):
-        provider = AIProvider()
+        executor_factory = Mock()
+        executor_factory.return_value.execute.return_value = "ok"
+        provider = AIProvider(executor_factory=executor_factory)
+        snapshot = resolve_api_request(sample_settings())
         pending = []
         def thread(*, target, args, **kwargs):
             pending.append(lambda: target(*args))
             return SimpleNamespace(start=lambda: None, is_alive=lambda: False, ident=0)
         finished = Mock()
         error = Mock()
-        kwargs = dict(messages=[], api_url="https://example.test/v1", api_key=None, model="local",
-                      temperature=0.7, max_chars=0, verify_ssl=True, on_chunk_cb=Mock(),
+        kwargs = dict(messages=[], snapshot=snapshot, max_chars=0, on_chunk_cb=Mock(),
                       on_finished_cb=finished, on_error_cb=error)
-        with patch("app.ai.provider.threading.Thread", side_effect=thread), patch("app.ai.provider.AIClient") as client:
-            client.return_value.request_completion.return_value = "ok"
+        with patch("app.ai.provider.threading.Thread", side_effect=thread):
             provider.request(**kwargs)
             old_token = provider._cancel_event
             provider.cancel()
@@ -182,7 +195,19 @@ class ProviderCancellationTests(unittest.TestCase):
             self.assertTrue(old_token.is_set())
             self.assertFalse(provider._cancel_event.is_set())
             pending[0]()
-            client.assert_not_called()
+            executor_factory.assert_not_called()
             pending[1]()
             finished.assert_called_once_with("ok")
             error.assert_not_called()
+            self.assertEqual(executor_factory.call_args.kwargs["limits"].operation_timeout, 120.0)
+            execute = executor_factory.return_value.execute.call_args
+            self.assertIs(execute.args[0], snapshot)
+
+    def test_cancel_stops_active_executor(self):
+        executor = Mock()
+        provider = AIProvider()
+        provider._active_executor = executor
+
+        provider.cancel()
+
+        executor.cancel.assert_called_once_with()

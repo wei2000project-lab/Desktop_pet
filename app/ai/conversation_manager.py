@@ -46,8 +46,7 @@ class ConversationManager:
 
         threading.Thread(
             target=self.prepare_and_request,
-            args=(user_text, request_id, snapshot.api_key, snapshot.base_url, snapshot.model,
-                  snapshot.temperature, max_chars, snapshot.verify_ssl),
+            args=(user_text, request_id, snapshot, max_chars),
             daemon=True,
             name="ConversationPrepareThread",
         ).start()
@@ -56,12 +55,8 @@ class ConversationManager:
         self,
         user_text: str,
         request_id: int,
-        api_key: str | None,
-        base_url: str,
-        model: str,
-        temp: float,
+        snapshot,
         max_chars: int,
-        verify_ssl: bool,
     ):
         if not self._is_current_request(request_id) or self._cancel_requested:
             return
@@ -96,10 +91,7 @@ class ConversationManager:
             # D. Optional one-turn web context. It starts with "網路查詢摘要" and is not saved to history.
             web_context = self.web_tool.build_context_if_needed(
                 user_text=user_text,
-                api_url=base_url,
-                api_key=api_key,
-                model=model,
-                verify_ssl=verify_ssl,
+                snapshot=snapshot,
                 should_cancel=lambda: self._cancel_requested or not self._is_current_request(request_id),
             )
             if web_context:
@@ -117,12 +109,8 @@ class ConversationManager:
         # 5. Call Provider in background
         self.provider.request(
             messages=messages,
-            api_url=base_url,
-            api_key=api_key,
-            model=model,
-            temperature=temp,
+            snapshot=snapshot,
             max_chars=max_chars,
-            verify_ssl=verify_ssl,
             on_chunk_cb=lambda chunk: self.on_api_chunk(chunk, request_id),
             on_finished_cb=lambda full_response: self.on_api_finished(user_text, full_response, request_id),
             on_error_cb=lambda error_msg: self.on_api_error(error_msg, request_id)
