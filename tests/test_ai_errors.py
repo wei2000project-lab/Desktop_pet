@@ -95,21 +95,25 @@ class AIErrorTests(unittest.TestCase):
         self.assertTrue(error.can_switch_key)
         self.assertNotIn("secret", str(error))
 
-    def test_client_falls_back_only_for_explicit_stream_condition(self):
+    def test_request_once_never_performs_hidden_stream_fallback(self):
         client = AIClient("https://example.test/v1", "fake-key", "model")
-        client._request_stream = Mock(side_effect=AIRequestError(
+        error = AIRequestError(
             AIErrorCategory.INVALID_REQUEST,
             "API 不支援串流。",
             http_status=400,
             service_code="streaming_not_supported",
             can_fallback_non_stream=True,
-        ))
+        )
+        client._request_stream = Mock(side_effect=error)
         client._request_non_stream = Mock(return_value="ok")
-        result = client.request_completion([{"role": "user", "content": "hi"}])
-        self.assertEqual(result, "ok")
-        client._request_non_stream.assert_called_once()
+        with self.assertRaises(AIRequestError) as raised:
+            client.request_once(
+                [{"role": "user", "content": "hi"}], stream=True,
+            )
+        self.assertIs(raised.exception, error)
+        client._request_non_stream.assert_not_called()
 
-    def test_client_does_not_fallback_for_arbitrary_or_partial_failure(self):
+    def test_request_once_propagates_arbitrary_or_partial_failure(self):
         for error in (
             internal_error(),
             AIRequestError(
@@ -124,7 +128,9 @@ class AIErrorTests(unittest.TestCase):
                 client._request_stream = Mock(side_effect=error)
                 client._request_non_stream = Mock(return_value="should-not-run")
                 with self.assertRaises(AIRequestError) as raised:
-                    client.request_completion([{"role": "user", "content": "hi"}])
+                    client.request_once(
+                        [{"role": "user", "content": "hi"}], stream=True,
+                    )
                 self.assertIs(raised.exception, error)
                 client._request_non_stream.assert_not_called()
 
@@ -186,9 +192,10 @@ class AIErrorTests(unittest.TestCase):
         try:
             client = AIClient("https://example.test/v1", "fake-key", "model")
             with self.assertRaises(AIRequestError) as raised:
-                client.request_completion(
+                client.request_once(
                     [{"role": "user", "content": "hi"}],
                     on_chunk_cb=Mock(side_effect=RuntimeError("secret-callback")),
+                    stream=True,
                 )
         finally:
             client_module.requests.Session = original

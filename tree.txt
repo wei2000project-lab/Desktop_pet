@@ -1,6 +1,7 @@
-Desktop Pet（版本控制檔案；包含本次待提交的新檔，不含執行期資料）
-├── API 設定介面重構計畫書.md
+Desktop Pet（目前 Git 追蹤檔案；不含執行期資料）
+├── API 設定系統重構計畫書.md
 ├── 過往開發計畫
+│   ├── API 設定介面重構計畫書.md
 │   ├── 架構重構計畫.md
 │   ├── 桌寵重構與介面優化計畫書.md
 │   ├── 桌寵應用程式開啟MVP計畫.md
@@ -12,8 +13,10 @@ Desktop Pet（版本控制檔案；包含本次待提交的新檔，不含執行
 │   │   ├── client.py
 │   │   ├── conversation_manager.py
 │   │   ├── conversation_memory.py
+│   │   ├── errors.py
 │   │   ├── prompt_builder.py
-│   │   └── provider.py
+│   │   ├── provider.py
+│   │   └── request_executor.py
 │   ├── animation
 │   │   ├── __init__.py
 │   │   ├── animator.py
@@ -103,11 +106,11 @@ Desktop Pet（版本控制檔案；包含本次待提交的新檔，不含執行
 │       ├── app.defaults.ini
 │       └── prompt.json
 ├── tests
-│   ├── test_dashboard_api_groups.py
-│   ├── test_dashboard_input_controls.py
+│   ├── test_ai_client.py
+│   ├── test_ai_errors.py
+│   ├── test_ai_request_executor.py
 │   ├── test_api_group_resolver.py
 │   ├── test_api_group_runtime.py
-│   ├── test_ai_client.py
 │   ├── test_animation_asset_paths.py
 │   ├── test_animator_reading_source.py
 │   ├── test_api_groups.py
@@ -129,8 +132,11 @@ Desktop Pet（版本控制檔案；包含本次待提交的新檔，不含執行
 │   ├── test_conversation_manager.py
 │   ├── test_conversation_memory.py
 │   ├── test_conversation_web_context_source.py
+│   ├── test_dashboard_api_groups.py
 │   ├── test_dashboard_api_keys.py
+│   ├── test_dashboard_dialogs.py
 │   ├── test_dashboard_entry.py
+│   ├── test_dashboard_input_controls.py
 │   ├── test_dashboard_personality.py
 │   ├── test_dashboard_shell.py
 │   ├── test_data_migration.py
@@ -158,6 +164,7 @@ Desktop Pet（版本控制檔案；包含本次待提交的新檔，不含執行
 │   │   ├── __init__.py
 │   │   ├── connection_test_controller.py
 │   │   ├── dashboard_window.py
+│   │   ├── dialogs.py
 │   │   ├── number_input.py
 │   │   ├── page_registry.py
 │   │   └── sidebar.py
@@ -172,7 +179,6 @@ Desktop Pet（版本控制檔案；包含本次待提交的新檔，不含執行
 │   │   └── message_formatting.py
 │   └── __init__.py
 ├── .gitignore
-├── API 設定系統重構計畫書.md
 ├── main.py
 ├── requirements.txt
 └── tree.txt

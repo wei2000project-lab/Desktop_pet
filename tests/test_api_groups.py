@@ -246,6 +246,44 @@ class GroupPersistenceTests(unittest.TestCase):
         settings_service.save(SettingsSnapshot(width=300))
         self.assertEqual(self.path.read_bytes(), before)
 
+    def test_saved_runtime_fields_and_environment_reference_are_preserved(self):
+        group = APIGroup(
+            "custom-group",
+            "自訂服務",
+            "https://custom.example.test/v1",
+            "custom/model-v2",
+            temperature=1.4,
+            verify_ssl=False,
+            keys=(
+                APIGroupKey("disabled", "已停用", "fake-disabled-key", 1, False),
+                APIGroupKey(
+                    "environment",
+                    "環境來源",
+                    priority=2,
+                    source="environment",
+                    environment_variable="OPENAI_API_KEY",
+                ),
+                APIGroupKey("backup", "備用", "fake-backup-key", 3, True),
+            ),
+        )
+        settings = APIGroupSettings((group,), group.id)
+
+        self.service.save(settings)
+        loaded = self.service.load()
+        snapshot = self.service.resolve_request(
+            environment={"OPENAI_API_KEY": "fake-runtime-env-key"}
+        )
+
+        self.assertEqual(loaded, settings)
+        self.assertEqual(snapshot.model, "custom/model-v2")
+        self.assertEqual(snapshot.temperature, 1.4)
+        self.assertFalse(snapshot.verify_ssl)
+        self.assertEqual(
+            [(candidate.id, candidate.source, candidate.priority) for candidate in snapshot.candidates],
+            [("environment", "environment", 2), ("backup", "stored", 3)],
+        )
+        self.assertNotIn("fake-runtime-env-key", self.path.read_text(encoding="utf-8"))
+
     def test_combined_save_rolls_back_all_files_and_memory(self):
         settings_service = SettingsService(self.store, self.events.append)
         settings_service.save(SettingsSnapshot(), api_groups=sample_settings())

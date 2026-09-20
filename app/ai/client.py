@@ -41,34 +41,6 @@ class AIClient:
         if self._cancelled or (should_cancel and should_cancel()):
             raise cancelled_error()
 
-    def request_completion(
-        self,
-        messages: List[Dict[str, str]],
-        temperature: float = 0.7,
-        max_chars: int = 150,
-        on_chunk_cb: Callable[[str], None] = None,
-        should_cancel: Callable[[], bool] = None,
-    ) -> str:
-        """Request a completion, using only explicitly safe stream fallback."""
-        try:
-            logger.info("Attempting streaming completion (stream=True)")
-            return self.request_once(
-                messages, temperature, max_chars, on_chunk_cb, should_cancel, stream=True,
-            )
-        except AIRequestError as error:
-            self._raise_if_cancelled(should_cancel)
-            if error.output_started or not error.can_fallback_non_stream:
-                raise
-            logger.warning(
-                "Streaming is explicitly unsupported; retrying once without streaming "
-                "(status=%s, code=%s)",
-                error.http_status,
-                error.service_code,
-            )
-            return self.request_once(
-                messages, temperature, max_chars, on_chunk_cb, should_cancel, stream=False,
-            )
-
     def request_once(
         self,
         messages: List[Dict[str, str]],
