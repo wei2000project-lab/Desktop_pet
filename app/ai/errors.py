@@ -7,6 +7,8 @@ import re
 
 class AIErrorCategory(str, Enum):
     CANCELLED = "cancelled"
+    OPERATION_TIMEOUT = "operation_timeout"
+    BUDGET_EXHAUSTED = "budget_exhausted"
     TIMEOUT = "timeout"
     CONNECTION = "connection"
     TLS = "tls"
@@ -85,6 +87,20 @@ class AIRequestError(Exception):
 
 def cancelled_error() -> AIRequestError:
     return AIRequestError(AIErrorCategory.CANCELLED, "已停止回覆。")
+
+
+def operation_timeout_error() -> AIRequestError:
+    return AIRequestError(
+        AIErrorCategory.OPERATION_TIMEOUT,
+        "API 操作已超過允許時間。",
+    )
+
+
+def budget_exhausted_error() -> AIRequestError:
+    return AIRequestError(
+        AIErrorCategory.BUDGET_EXHAUSTED,
+        "API 操作已達請求次數上限。",
+    )
 
 
 def timeout_error(*, output_started=False) -> AIRequestError:

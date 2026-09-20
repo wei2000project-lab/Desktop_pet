@@ -52,7 +52,9 @@ class AIClient:
         """Request a completion, using only explicitly safe stream fallback."""
         try:
             logger.info("Attempting streaming completion (stream=True)")
-            return self._request_stream(messages, temperature, max_chars, on_chunk_cb, should_cancel)
+            return self.request_once(
+                messages, temperature, max_chars, on_chunk_cb, should_cancel, stream=True,
+            )
         except AIRequestError as error:
             self._raise_if_cancelled(should_cancel)
             if error.output_started or not error.can_fallback_non_stream:
@@ -63,7 +65,23 @@ class AIClient:
                 error.http_status,
                 error.service_code,
             )
-            return self._request_non_stream(messages, temperature, max_chars, on_chunk_cb, should_cancel)
+            return self.request_once(
+                messages, temperature, max_chars, on_chunk_cb, should_cancel, stream=False,
+            )
+
+    def request_once(
+        self,
+        messages: List[Dict[str, str]],
+        temperature: float = 0.7,
+        max_chars: int = 150,
+        on_chunk_cb: Callable[[str], None] = None,
+        should_cancel: Callable[[], bool] = None,
+        *,
+        stream: bool,
+    ) -> str:
+        """Perform exactly one HTTP request; retry policy belongs to the executor."""
+        request = self._request_stream if stream else self._request_non_stream
+        return request(messages, temperature, max_chars, on_chunk_cb, should_cancel)
 
     def test_connection(self) -> bool:
         self._request_non_stream(
@@ -118,7 +136,7 @@ class AIClient:
                 url,
                 json=payload,
                 headers=headers,
-                timeout=(10, self.timeout),  # (connect_timeout, read_timeout)
+                timeout=(min(10, self.timeout), self.timeout),
                 verify=self.verify_ssl,
                 stream=True,
             )
@@ -210,7 +228,7 @@ class AIClient:
                 url,
                 json=payload,
                 headers=headers,
-                timeout=(10, self.timeout),
+                timeout=(min(10, self.timeout), self.timeout),
                 verify=self.verify_ssl,
             )
             response.raise_for_status()
