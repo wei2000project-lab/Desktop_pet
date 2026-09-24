@@ -1,6 +1,6 @@
 """Dashboard controls whose values change only through deliberate input."""
 from PySide6.QtCore import QRectF, QSize, Qt
-from PySide6.QtGui import QColor, QPainter, QPen
+from PySide6.QtGui import QColor, QPainter
 from PySide6.QtWidgets import (
     QApplication, QAbstractButton, QAbstractSpinBox, QCheckBox, QComboBox,
     QLineEdit, QPlainTextEdit, QTextEdit, QWidget,
@@ -86,7 +86,3 @@ class ToggleSwitch(QAbstractButton):
         knob_x = 24 if self.isChecked() else 4
         painter.setBrush(QColor("#ffffff"))
         painter.drawEllipse(QRectF(knob_x, 5, 16, 16))
-        if self.hasFocus():
-            painter.setBrush(Qt.NoBrush)
-            painter.setPen(QPen(QColor("#5f2d82"), 2))
-            painter.drawRoundedRect(QRectF(1, 1, 44, 24), 12, 12)

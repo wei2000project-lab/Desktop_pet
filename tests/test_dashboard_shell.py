@@ -14,6 +14,7 @@ from PySide6.QtWidgets import QApplication, QMessageBox, QScrollArea
 from app.settings import ApiKeyEntry, SettingsService, SettingsSnapshot, SettingsValidationError
 from dataclasses import replace
 from ui.dashboard import DashboardWindow
+from ui.dashboard.input_controls import ToggleSwitch
 from ui.dashboard.page_registry import default_page_definitions
 from ui.dashboard.sidebar import DashboardSidebar
 
@@ -152,6 +153,23 @@ class DashboardShellTests(unittest.TestCase):
         self.assertFalse(self.window.is_dirty)
         self.assertEqual(len(self.settings.saved), 1)
         self.assertTrue(self.settings.saved[0].always_on_top)
+
+    def test_general_page_uses_unified_toggle_and_danger_hierarchy(self):
+        page = self.window.general_page
+
+        self.assertIsInstance(page.always_on_top_check, ToggleSwitch)
+        self.assertEqual(page.always_on_top_status.text(), "已停用")
+        self.assertFalse(page.always_on_top_status.property("active"))
+        self.assertEqual(
+            page.clear_history_button.parentWidget().objectName(),
+            "dashboardDangerCard",
+        )
+
+        page.always_on_top_check.setChecked(True)
+
+        self.assertEqual(page.always_on_top_status.text(), "已啟用")
+        self.assertTrue(page.always_on_top_status.property("active"))
+        self.assertTrue(self.window.is_dirty)
 
     def test_cancel_restores_original_value_without_saving(self):
         self.window.general_page.always_on_top_check.setChecked(True)

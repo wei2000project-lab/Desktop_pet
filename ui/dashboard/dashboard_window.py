@@ -30,7 +30,7 @@ from ui.dashboard.input_controls import finish_input, scroll_page_with_wheel
 
 class DashboardWindow(QMainWindow):
     DEFAULT_WIDTH = 900
-    DEFAULT_HEIGHT = 760
+    DEFAULT_HEIGHT = 650
     MINIMUM_WIDTH = 650
     MINIMUM_HEIGHT = 600
     AUTO_COLLAPSE_WIDTH = 800
@@ -401,10 +401,17 @@ class DashboardWindow(QMainWindow):
     def _apply_styles(self) -> None:
         self.setStyleSheet(
             """
-            QMainWindow, #dashboardCentralWidget, #dashboardContentContainer,
-            #dashboardContentStack,
-            #dashboardPageContent {
+            QMainWindow, #dashboardCentralWidget, #dashboardContentContainer {
                 background-color: #ffffff;
+                color: #24212a;
+            }
+            #dashboardContentStack, #dashboardPageContent,
+            QScrollArea#dashboardPage_general,
+            QScrollArea#dashboardPage_appearance,
+            QScrollArea#dashboardPage_behavior,
+            QScrollArea#dashboardPage_ai,
+            QScrollArea#dashboardPage_personality {
+                background-color: #f4f3f6;
                 color: #24212a;
             }
             #dashboardSidebar {
@@ -521,6 +528,37 @@ class DashboardWindow(QMainWindow):
                 font-size: 16px;
                 font-weight: 600;
             }
+            #dashboardSettingLabel {
+                color: #3f3944;
+                font-size: 14px;
+                font-weight: 600;
+            }
+            #dashboardSettingDescription {
+                color: #6d6673;
+                font-size: 13px;
+            }
+            #dashboardToggleStatus {
+                color: #827a89;
+                font-size: 13px;
+            }
+            #dashboardToggleStatus[active="true"] {
+                color: #5f2d82;
+                font-weight: 600;
+            }
+            #dashboardDangerCard {
+                background-color: #fff8f7;
+                border: 1px solid #ecd4d1;
+                border-radius: 10px;
+            }
+            #dashboardDangerTitle {
+                color: #8f241d;
+                font-size: 16px;
+                font-weight: 600;
+            }
+            #dashboardDangerDescription {
+                color: #765b58;
+                font-size: 14px;
+            }
             #dashboardSettingsCard QLabel, #dashboardSettingsCard QCheckBox,
             #dashboardSettingsCard QRadioButton {
                 color: #3f3944;
@@ -609,7 +647,10 @@ class DashboardWindow(QMainWindow):
             }
             #dashboardDangerButton:hover,
             #dashboardDangerButton:focus {
-                background-color: #fff1f0;
+                background-color: #fbe9e7;
+            }
+            #dashboardDangerButton:pressed {
+                background-color: #f4d9d6;
             }
             """
         )

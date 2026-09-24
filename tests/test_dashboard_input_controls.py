@@ -8,7 +8,7 @@ from PySide6.QtGui import QWheelEvent
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication
 
-from ui.dashboard.input_controls import NoWheelCheckBox, NoWheelComboBox
+from ui.dashboard.input_controls import NoWheelCheckBox, NoWheelComboBox, ToggleSwitch
 from ui.dashboard.number_input import DecimalInput, IntegerInput
 from ui.dashboard.pages.appearance_page import AppearancePage
 from ui.dashboard import DashboardWindow
@@ -132,6 +132,17 @@ class DashboardInputControlTests(unittest.TestCase):
         self.assertEqual(editor.lineEdit().selectedText(), "")
         self.assertEqual(finished, [True])
         page.close()
+
+    def test_focused_toggle_does_not_draw_an_unrelated_purple_outline(self):
+        toggle = ToggleSwitch()
+        toggle.show()
+        toggle.setFocus()
+        self.app.processEvents()
+
+        image = toggle.grab().toImage()
+
+        self.assertNotEqual(image.pixelColor(1, 1).name(), "#5f2d82")
+        toggle.close()
 
 
 if __name__ == "__main__":
