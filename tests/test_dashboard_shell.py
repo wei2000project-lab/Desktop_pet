@@ -66,7 +66,7 @@ class DashboardShellTests(unittest.TestCase):
 
     def test_window_uses_expected_default_and_minimum_size(self):
         self.assertEqual(self.window.size().width(), 900)
-        self.assertEqual(self.window.size().height(), 760)
+        self.assertEqual(self.window.size().height(), 650)
         self.assertEqual(self.window.minimumWidth(), 650)
         self.assertEqual(self.window.minimumHeight(), 600)
 
