@@ -7,6 +7,7 @@ from urllib.parse import urlsplit
 from app.core.config_manager import config_manager
 from app.core.event_bus import event_bus
 from app.settings.model import ApiKeyEntry, SettingsSnapshot, SettingsValidationError
+from app.settings.editing import normalize_key_entries
 
 
 LEGACY_PERSONALITY_MAP = {
@@ -62,13 +63,7 @@ class SettingsService:
         return self.normalize(snapshot)
 
     def normalize(self, snapshot: SettingsSnapshot) -> SettingsSnapshot:
-        normalized_keys = []
-        for entry in snapshot.api_keys:
-            key = entry.key.strip()
-            if not key:
-                continue
-            name = entry.name.strip() or f"Key {len(normalized_keys) + 1}"
-            normalized_keys.append(ApiKeyEntry(name=name, key=key))
+        normalized_keys = normalize_key_entries(snapshot.api_keys)
 
         base_url = snapshot.base_url.strip()
         model = snapshot.model.strip()
@@ -77,7 +72,7 @@ class SettingsService:
 
         return replace(
             snapshot,
-            api_keys=tuple(normalized_keys),
+            api_keys=normalized_keys,
             base_url=base_url,
             model=model,
             custom_personality=custom_personality,

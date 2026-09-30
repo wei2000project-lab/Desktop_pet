@@ -4,9 +4,8 @@ from PySide6.QtWidgets import (
     QScrollArea, QVBoxLayout, QWidget,
 )
 
-from app.ai.prompt_builder import get_personality_option_labels
-from app.settings import SettingsSnapshot
-from ui.dashboard.input_controls import FocusClearingWidget
+from app.settings.model import SettingsSnapshot
+from ui.settings.widgets.input_controls import FocusClearingWidget
 
 
 class PersonalityPage(QScrollArea):
@@ -19,36 +18,29 @@ class PersonalityPage(QScrollArea):
         self._loading = False
         self._selected_key = ""
         content = FocusClearingWidget()
-        content.setObjectName("dashboardPageContent")
+        content.setObjectName("settingsPageContent")
         layout = QVBoxLayout(content)
         layout.setContentsMargins(32, 28, 32, 28)
         layout.setSpacing(18)
         heading = QLabel("人格")
-        heading.setObjectName("dashboardPageHeading")
+        heading.setObjectName("settingsPageHeading")
         layout.addWidget(heading)
         description = QLabel("一次選擇一種人格，按下套用才會儲存。")
-        description.setObjectName("dashboardPageDescription")
+        description.setObjectName("settingsPageDescription")
         description.setWordWrap(True)
         layout.addWidget(description)
 
         card = QWidget()
-        card.setObjectName("dashboardSettingsCard")
+        card.setObjectName("settingsCard")
         card_layout = QVBoxLayout(card)
         card_layout.setContentsMargins(20, 18, 20, 18)
         card_layout.setSpacing(12)
         title = QLabel("人格設定")
-        title.setObjectName("dashboardSectionTitle")
+        title.setObjectName("settingsSectionTitle")
         card_layout.addWidget(title)
         self.personality_group = QButtonGroup(self)
         self.personality_buttons = {}
-        options = {**get_personality_option_labels(), "custom": "使用自訂人格 Prompt"}
-        for key, label in options.items():
-            button = QRadioButton(label)
-            button.setAccessibleName(label)
-            self.personality_buttons[key] = button
-            self.personality_group.addButton(button)
-            button.toggled.connect(lambda checked, option=key: self._select(option, checked))
-            card_layout.addWidget(button)
+        self._options_layout = card_layout
 
         self.custom_personality_input = QPlainTextEdit()
         self.custom_personality_input.setAccessibleName("自訂人格內容")
@@ -58,12 +50,26 @@ class PersonalityPage(QScrollArea):
         self.custom_personality_input.textChanged.connect(self._emit_settings)
         card_layout.addWidget(self.custom_personality_input)
         hint = QLabel("切換回內建人格不會刪除自訂內容；未選擇自訂時，該內容不會用於回覆。")
-        hint.setObjectName("dashboardPageDescription")
+        hint.setObjectName("settingsPageDescription")
         hint.setWordWrap(True)
         card_layout.addWidget(hint)
         layout.addWidget(card)
         layout.addStretch(1)
         self.setWidget(content)
+
+    def set_options(self, options):
+        for button in self.personality_buttons.values():
+            self.personality_group.removeButton(button)
+            self._options_layout.removeWidget(button)
+            button.deleteLater()
+        self.personality_buttons = {}
+        for index, (key, label) in enumerate(options.items()):
+            button = QRadioButton(label)
+            button.setAccessibleName(label)
+            self.personality_buttons[key] = button
+            self.personality_group.addButton(button)
+            button.toggled.connect(lambda checked, option=key: self._select(option, checked))
+            self._options_layout.insertWidget(index + 1, button)
 
     def _select(self, key, checked):
         if self._loading or not checked:

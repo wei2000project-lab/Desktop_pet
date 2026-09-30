@@ -1,4 +1,4 @@
-"""Dashboard controls whose values change only through deliberate input."""
+"""Settings controls whose values change only through deliberate input."""
 from PySide6.QtCore import QRectF, QSize, Qt
 from PySide6.QtGui import QColor, QPainter
 from PySide6.QtWidgets import (
@@ -54,15 +54,15 @@ class FocusClearingWidget(QWidget):
 
 
 class NoWheelComboBox(QComboBox):
-    """Semantic type; DashboardWindow owns its Wheel policy."""
+    """Semantic type; SettingsWindow owns its Wheel policy."""
 
 
 class NoWheelCheckBox(QCheckBox):
-    """Semantic type; DashboardWindow owns its Wheel policy."""
+    """Semantic type; SettingsWindow owns its Wheel policy."""
 
 
 class ToggleSwitch(QAbstractButton):
-    """Compact, keyboard-accessible on/off control for Dashboard settings."""
+    """Compact, keyboard-accessible on/off control for Settings settings."""
 
     def __init__(self, parent=None):
         super().__init__(parent)

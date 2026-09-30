@@ -8,20 +8,20 @@ from PySide6.QtGui import QWheelEvent
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication
 
-from ui.dashboard.input_controls import NoWheelCheckBox, NoWheelComboBox, ToggleSwitch
-from ui.dashboard.number_input import DecimalInput, IntegerInput
-from ui.dashboard.pages.appearance_page import AppearancePage
-from ui.dashboard import DashboardWindow
-from tests.test_dashboard_shell import FakeSettingsBackend
+from ui.settings.widgets.input_controls import NoWheelCheckBox, NoWheelComboBox, ToggleSwitch
+from ui.settings.widgets.number_input import DecimalInput, IntegerInput
+from ui.settings.pages.appearance_page import AppearancePage
+from tests.settings_helpers import create_settings_window
+from tests.settings_helpers import FakeSettingsBackend
 
 
-class DashboardInputControlTests(unittest.TestCase):
+class SettingsInputControlTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.app = QApplication.instance() or QApplication([])
 
     def setUp(self):
-        self.window = DashboardWindow(settings_backend=FakeSettingsBackend())
+        self.window, self.presenter = create_settings_window(settings_backend=FakeSettingsBackend())
         self.window.select_page("appearance")
         self.page = self.window.appearance_page
         self.page.widget().setMinimumHeight(1200)
@@ -29,7 +29,7 @@ class DashboardInputControlTests(unittest.TestCase):
         self.app.processEvents()
 
     def tearDown(self):
-        self.window._allow_close = True
+        self.window._close_approved = True
         self.window.close()
         self.window.deleteLater()
         self.app.processEvents()
@@ -47,7 +47,7 @@ class DashboardInputControlTests(unittest.TestCase):
         QApplication.sendEvent(target, self.wheel_event())
         self.assertGreater(bar.value(), 80)
 
-    def test_dashboard_wheel_changes_only_outer_page_for_combo_and_checkbox(self):
+    def test_settings_wheel_changes_only_outer_page_for_combo_and_checkbox(self):
         combo = NoWheelComboBox(self.page.widget())
         combo.addItems(["第一個", "第二個"])
         checkbox = NoWheelCheckBox("測試", self.page.widget())
@@ -58,7 +58,7 @@ class DashboardInputControlTests(unittest.TestCase):
         self.assertEqual(combo.currentIndex(), 0)
         self.assertTrue(checkbox.isChecked())
 
-    def test_dashboard_wheel_changes_only_outer_page_for_integer_and_decimal(self):
+    def test_settings_wheel_changes_only_outer_page_for_integer_and_decimal(self):
         integer = self.page.width_input
         decimal = DecimalInput(self.page.widget())
         decimal.setRange(0, 10)

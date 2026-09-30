@@ -53,13 +53,18 @@ Desktop Pet（目前 Git 追蹤檔案；不含執行期資料）
 │   │   ├── user_message_router.py
 │   │   └── window_manager.py
 │   ├── settings
-│   │   ├── api_group_resolver.py
 │   │   ├── __init__.py
+│   │   ├── api_group_resolver.py
 │   │   ├── api_group_service.py
 │   │   ├── api_groups.py
 │   │   ├── connection_test.py
+│   │   ├── connection_test_controller.py
+│   │   ├── editing.py
 │   │   ├── model.py
-│   │   └── service.py
+│   │   ├── presenter.py
+│   │   ├── service.py
+│   │   ├── session.py
+│   │   └── view_contracts.py
 │   ├── utils
 │   │   ├── __init__.py
 │   │   └── logger.py
@@ -106,13 +111,14 @@ Desktop Pet（目前 Git 追蹤檔案；不含執行期資料）
 │       ├── app.defaults.ini
 │       └── prompt.json
 ├── tests
+│   ├── settings_helpers.py
 │   ├── test_ai_client.py
 │   ├── test_ai_errors.py
 │   ├── test_ai_request_executor.py
-│   ├── test_api_group_resolver.py
-│   ├── test_api_group_runtime.py
 │   ├── test_animation_asset_paths.py
 │   ├── test_animator_reading_source.py
+│   ├── test_api_group_resolver.py
+│   ├── test_api_group_runtime.py
 │   ├── test_api_groups.py
 │   ├── test_api_keys.py
 │   ├── test_app_aliases.py
@@ -132,12 +138,6 @@ Desktop Pet（目前 Git 追蹤檔案；不含執行期資料）
 │   ├── test_conversation_manager.py
 │   ├── test_conversation_memory.py
 │   ├── test_conversation_web_context_source.py
-│   ├── test_dashboard_api_groups.py
-│   ├── test_dashboard_api_keys.py
-│   ├── test_dashboard_dialogs.py
-│   ├── test_dashboard_entry.py
-│   ├── test_dashboard_input_controls.py
-│   ├── test_dashboard_personality.py
 │   ├── test_dashboard_shell.py
 │   ├── test_data_migration.py
 │   ├── test_intent_router.py
@@ -148,26 +148,25 @@ Desktop Pet（目前 Git 追蹤檔案；不含執行期資料）
 │   ├── test_prompt_builder.py
 │   ├── test_reading_animation.py
 │   ├── test_routing_source.py
+│   ├── test_settings_api_groups.py
+│   ├── test_settings_api_keys.py
+│   ├── test_settings_architecture.py
+│   ├── test_settings_dialogs.py
+│   ├── test_settings_entry.py
+│   ├── test_settings_input_controls.py
+│   ├── test_settings_personality.py
 │   ├── test_settings_service.py
+│   ├── test_settings_session.py
+│   ├── test_settings_window.py
+│   ├── test_settings_workflow.py
 │   └── test_web_tools.py
 ├── ui
 │   ├── dashboard
-│   │   ├── api_group_editor.py
-│   │   ├── input_controls.py
-│   │   ├── pages
-│   │   │   ├── __init__.py
-│   │   │   ├── ai_page.py
-│   │   │   ├── appearance_page.py
-│   │   │   ├── behavior_page.py
-│   │   │   ├── general_page.py
-│   │   │   └── personality_page.py
 │   │   ├── __init__.py
-│   │   ├── connection_test_controller.py
 │   │   ├── dashboard_window.py
-│   │   ├── dialogs.py
-│   │   ├── number_input.py
 │   │   ├── page_registry.py
-│   │   └── sidebar.py
+│   │   ├── sidebar.py
+│   │   └── styles.py
 │   ├── pet
 │   │   ├── dialogs
 │   │   │   ├── __init__.py
@@ -177,6 +176,25 @@ Desktop Pet（目前 Git 追蹤檔案；不含執行期資料）
 │   │   ├── bubble.py
 │   │   ├── desktop_pet.py
 │   │   └── message_formatting.py
+│   ├── settings
+│   │   ├── pages
+│   │   │   ├── __init__.py
+│   │   │   ├── ai_page.py
+│   │   │   ├── appearance_page.py
+│   │   │   ├── behavior_page.py
+│   │   │   ├── general_page.py
+│   │   │   └── personality_page.py
+│   │   ├── widgets
+│   │   │   ├── __init__.py
+│   │   │   ├── api_group_editor.py
+│   │   │   ├── input_controls.py
+│   │   │   └── number_input.py
+│   │   ├── __init__.py
+│   │   ├── dialogs.py
+│   │   ├── page_registry.py
+│   │   ├── settings_window.py
+│   │   └── styles.py
+│   ├── README.md
 │   └── __init__.py
 ├── .gitignore
 ├── main.py

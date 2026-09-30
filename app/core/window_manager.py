@@ -8,6 +8,7 @@ class WindowManager:
         self.pet_window = None
         self.bubble_window = None
         self.settings_window = None
+        self.settings_presenter = None
         
         # Subscribe to window-related events
         event_bus.subscribe("show_bubble", self.show_bubble)
@@ -52,12 +53,20 @@ class WindowManager:
     def show_settings(self):
         try:
             if self.settings_window is None:
-                from ui.dashboard import DashboardWindow
-                self.settings_window = DashboardWindow()
+                from ui.settings import SettingsWindow
+                from app.settings.presenter import SettingsPresenter
+                window = SettingsWindow()
+                try:
+                    presenter = SettingsPresenter(window)
+                except Exception:
+                    window.deleteLater()
+                    raise
+                self.settings_window = window
+                self.settings_presenter = presenter
             elif not self.settings_window.isVisible():
-                self.settings_window.load_settings()
+                self.settings_presenter.reload()
         except Exception:
-            logger.error("Failed to open Dashboard settings", exc_info=True)
+            logger.error("Failed to open settings", exc_info=True)
             return
         self.settings_window.showNormal()
         self.settings_window.raise_()

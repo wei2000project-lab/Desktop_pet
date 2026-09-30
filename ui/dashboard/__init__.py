@@ -1,4 +1,4 @@
-"""Dashboard UI package."""
+"""Reusable dashboard shell; feature pages are supplied by callers."""
 
 from .dashboard_window import DashboardWindow
 

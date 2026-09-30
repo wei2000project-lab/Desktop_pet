@@ -19,7 +19,7 @@ class DashboardSidebar(QWidget):
     EXPANDED_WIDTH = 212
     COLLAPSED_WIDTH = 60
 
-    def __init__(self, pages: tuple[PageDefinition, ...], parent=None):
+    def __init__(self, pages: tuple[PageDefinition, ...], parent=None, *, title: str = "Nova"):
         super().__init__(parent)
         self.setObjectName("dashboardSidebar")
         self._pages = pages
@@ -32,7 +32,7 @@ class DashboardSidebar(QWidget):
 
         header = QHBoxLayout()
         header.setContentsMargins(6, 0, 2, 8)
-        self.title_label = QLabel("Nova 設定")
+        self.title_label = QLabel(title)
         self.title_label.setObjectName("dashboardSidebarTitle")
         header.addWidget(self.title_label, 1)
 

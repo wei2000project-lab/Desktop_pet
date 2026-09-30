@@ -11,43 +11,25 @@ from PySide6.QtWidgets import QApplication, QLineEdit, QMessageBox
 
 from app.settings import ApiKeyEntry
 from app.settings.connection_test import ConnectionTestWorker, ConnectionTestSignals
-from tests.test_dashboard_shell import FakeSettingsBackend
-from ui.dashboard import DashboardWindow
+from tests.settings_helpers import FakeSettingsBackend, FakePool, FakeWorker
+from tests.settings_helpers import create_settings_window
 
 
-class FakePool:
-    def __init__(self):
-        self.workers = []
-
-    def start(self, worker):
-        self.workers.append(worker)
-
-
-class FakeWorker:
-    def __init__(self, request_id, base_url, api_key, model, verify_ssl):
-        self.request_id = request_id
-        self.inputs = (base_url, api_key, model, verify_ssl)
-        self.signals = ConnectionTestSignals()
-
-    def finish(self, success=True, message="連線測試成功。"):
-        self.signals.finished.emit(self.request_id, success, message)
-
-
-class DashboardApiKeyTests(unittest.TestCase):
+class SettingsApiKeyTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.app = QApplication.instance() or QApplication([])
 
     def setUp(self):
         self.backend = FakeSettingsBackend()
-        self.window = DashboardWindow(settings_backend=self.backend)
+        self.window, self.presenter = create_settings_window(settings_backend=self.backend)
         self.page = self.window.ai_page
         self.pool = FakePool()
-        self.window.connection_tests.pool = self.pool
-        self.window.connection_tests.worker_factory = FakeWorker
+        self.presenter.connection_tests.pool = self.pool
+        self.presenter.connection_tests.worker_factory = FakeWorker
 
     def tearDown(self):
-        self.window._allow_close = True
+        self.window._close_approved = True
         self.window.close()
         self.window.deleteLater()
         self.app.processEvents()
@@ -63,9 +45,9 @@ class DashboardApiKeyTests(unittest.TestCase):
         row["name_input"].setText(" 第一把 ")
         extra = self.page.add_api_key_row("第二把", "fake-second-key")
         self.page.remove_api_key_row(row["id"])
-        self.assertTrue(self.window.is_dirty)
+        self.assertTrue(self.presenter.session.is_dirty)
         self.assertEqual(self.backend.saved, [])
-        self.window.apply_changes()
+        self.presenter.apply_changes()
         self.assertEqual(self.backend.saved[0].api_keys,
                          (ApiKeyEntry("第二把", "fake-second-key"),))
         self.assertEqual(len(self.page.api_key_rows), 1)
@@ -73,19 +55,19 @@ class DashboardApiKeyTests(unittest.TestCase):
 
     def test_empty_rows_do_not_dirty_and_cancel_restores_keys(self):
         self.page.add_api_key_row()
-        self.assertFalse(self.window.is_dirty)
+        self.assertFalse(self.presenter.session.is_dirty)
         self.key_row()
-        self.window.cancel_changes()
-        self.assertEqual(self.page.collect_api_key_entries(), ())
+        self.presenter.cancel_changes()
+        self.assertEqual(self.presenter.session.snapshot.api_keys, ())
         self.assertEqual(len(self.page.api_key_rows), 1)
-        self.assertFalse(self.window.is_dirty)
+        self.assertFalse(self.presenter.session.is_dirty)
 
     def test_last_row_delete_keeps_one_empty_row(self):
         row = self.key_row()
         self.page.remove_api_key_row(row["id"])
         self.assertEqual(len(self.page.api_key_rows), 1)
-        self.assertEqual(self.page.collect_api_key_entries(), ())
-        self.assertFalse(self.window.is_dirty)
+        self.assertEqual(self.presenter.session.snapshot.api_keys, ())
+        self.assertFalse(self.presenter.session.is_dirty)
 
     def test_test_uses_draft_without_saving_and_blocks_duplicate(self):
         row = self.key_row()
@@ -120,7 +102,7 @@ class DashboardApiKeyTests(unittest.TestCase):
         self.page.remove_api_key_row(row["id"])
         self.pool.workers[0].finish()
         self.assertEqual(self.page.api_key_rows[0]["status"].text(), "")
-        self.assertEqual(self.window.connection_tests._jobs, {})
+        self.assertEqual(self.presenter.connection_tests._jobs, {})
 
     def test_edit_during_test_marks_result_stale(self):
         row = self.key_row()
@@ -133,7 +115,7 @@ class DashboardApiKeyTests(unittest.TestCase):
     def test_apply_during_test_does_not_update_rebuilt_rows(self):
         row = self.key_row()
         row["test_button"].click()
-        self.window.apply_changes()
+        self.presenter.apply_changes()
         self.pool.workers[0].finish()
         self.assertEqual(self.page.api_key_rows[0]["status"].text(), "")
 
@@ -141,7 +123,7 @@ class DashboardApiKeyTests(unittest.TestCase):
         row = self.key_row()
         row["test_button"].click()
         event = QCloseEvent()
-        with patch("ui.dashboard.dashboard_window.DashboardDialog.question",
+        with patch("ui.settings.settings_window.SettingsDialog.question",
                    return_value=QMessageBox.StandardButton.Discard):
             self.window.closeEvent(event)
         self.assertTrue(event.isAccepted())
@@ -152,7 +134,7 @@ class DashboardApiKeyTests(unittest.TestCase):
         row = self.key_row()
         row["test_button"].click()
         event = QCloseEvent()
-        with patch("ui.dashboard.dashboard_window.DashboardDialog.question",
+        with patch("ui.settings.settings_window.SettingsDialog.question",
                    return_value=QMessageBox.StandardButton.Cancel):
             self.window.closeEvent(event)
         self.assertFalse(event.isAccepted())
@@ -170,8 +152,8 @@ class DashboardApiKeyTests(unittest.TestCase):
         entered = threading.Event()
         release = threading.Event()
         pool = QThreadPool()
-        self.window.connection_tests.pool = pool
-        self.window.connection_tests.worker_factory = ConnectionTestWorker
+        self.presenter.connection_tests.pool = pool
+        self.presenter.connection_tests.worker_factory = ConnectionTestWorker
         row = self.key_row()
 
         def connection_check():
@@ -197,14 +179,14 @@ class DashboardApiKeyTests(unittest.TestCase):
         row = self.key_row()
         row["test_button"].click()
         worker = self.pool.workers[0]
-        self.window._allow_close = True
+        self.window._close_approved = True
         self.window.close()
         self.window.deleteLater()
         QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
         worker.finish()
         self.app.processEvents()
         # tearDown must not touch a C++ widget already destroyed.
-        self.window = DashboardWindow(settings_backend=self.backend)
+        self.window, self.presenter = create_settings_window(settings_backend=self.backend)
 
 
 class ConnectionWorkerTests(unittest.TestCase):

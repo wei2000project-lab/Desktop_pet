@@ -11,34 +11,36 @@ from PySide6.QtCore import Qt
 
 from app.core.window_manager import WindowManager
 from app.core.event_bus import event_bus
-from tests.test_dashboard_shell import FakeSettingsBackend
-from ui.dashboard import DashboardWindow
+from tests.settings_helpers import FakeSettingsBackend
+from tests.settings_helpers import create_settings_window
 
 
-class DashboardEntryTests(unittest.TestCase):
+class SettingsEntryTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.app = QApplication.instance() or QApplication([])
 
     def setUp(self):
         self.backend = FakeSettingsBackend()
-        self.window = DashboardWindow(settings_backend=self.backend)
+        self.window, self.presenter = create_settings_window(settings_backend=self.backend)
         self.manager = object.__new__(WindowManager)
         self.manager.settings_window = None
+        self.manager.settings_presenter = self.presenter
 
     def tearDown(self):
-        self.window._allow_close = True
+        self.window._close_approved = True
         self.window.close()
         self.window.deleteLater()
         self.app.processEvents()
 
     def open_settings(self):
-        with patch("ui.dashboard.DashboardWindow", return_value=self.window) as factory:
+        with (patch("ui.settings.SettingsWindow", return_value=self.window) as factory,
+              patch("app.settings.presenter.SettingsPresenter", return_value=self.presenter)):
             self.manager.show_settings()
         self.app.processEvents()
         return factory
 
-    def test_entry_creates_dashboard_once(self):
+    def test_entry_creates_settings_once(self):
         self.open_settings().assert_called_once_with()
         self.assertIs(self.manager.settings_window, self.window)
         self.open_settings().assert_not_called()
@@ -48,12 +50,12 @@ class DashboardEntryTests(unittest.TestCase):
         self.open_settings()
         self.window.select_page("appearance")
         self.window.appearance_page.width_input.setValue(400)
-        with patch.object(self.window, "load_settings") as reload:
+        with patch.object(self.presenter, "reload") as reload:
             self.open_settings()
         reload.assert_not_called()
         self.assertEqual(self.window.current_page_key, "appearance")
         self.assertEqual(self.window.appearance_page.width_input.value(), 400)
-        self.assertTrue(self.window.is_dirty)
+        self.assertTrue(self.presenter.session.is_dirty)
 
     def test_minimized_window_is_restored_without_losing_draft(self):
         self.open_settings()
@@ -81,25 +83,25 @@ class DashboardEntryTests(unittest.TestCase):
         self.open_settings().assert_not_called()
         self.assertEqual(self.window.appearance_page.width_input.value(), 450)
         self.assertEqual(self.window.ai_page.model_input.text(), "new-model")
-        self.assertFalse(self.window.is_dirty)
+        self.assertFalse(self.presenter.session.is_dirty)
 
     def test_cancel_then_reopen_restores_saved_values(self):
         self.open_settings()
         self.window.appearance_page.width_input.setValue(400)
-        self.window.cancel_changes()
+        self.presenter.cancel_changes()
         self.open_settings()
         self.assertEqual(self.window.appearance_page.width_input.value(), 250)
-        self.assertFalse(self.window.is_dirty)
+        self.assertFalse(self.presenter.session.is_dirty)
 
     def test_discard_then_reopen_is_clean(self):
         self.open_settings()
         self.window.ai_page.model_input.setText("draft")
-        with patch("ui.dashboard.dashboard_window.DashboardDialog.question",
+        with patch("ui.settings.settings_window.SettingsDialog.question",
                    return_value=QMessageBox.StandardButton.Discard):
             self.window.close()
         self.open_settings()
         self.assertEqual(self.window.ai_page.model_input.text(), self.backend.snapshot.model)
-        self.assertFalse(self.window.is_dirty)
+        self.assertFalse(self.presenter.session.is_dirty)
 
     def test_load_failure_does_not_show_stale_settings(self):
         self.manager.settings_window = self.window
@@ -152,7 +154,7 @@ class DashboardEntryTests(unittest.TestCase):
                 self.window.general_page.always_on_top_check.setChecked(True)
                 self.window.behavior_page.reading_idle_seconds_input.setValue(120)
                 self.assertEqual(pet.pet_width, 250)
-                self.assertTrue(self.window.apply_changes())
+                self.assertTrue(self.presenter.apply_changes())
                 self.app.processEvents()
                 self.assertEqual((pet.pet_width, pet.pet_height), (400, 350))
                 self.assertEqual((pet.width(), pet.height()), (420, 370))

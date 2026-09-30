@@ -3,9 +3,9 @@ from PySide6.QtWidgets import (
     QFormLayout, QLabel, QScrollArea, QVBoxLayout, QWidget,
 )
 
-from app.settings import SettingsSnapshot
-from ui.dashboard.number_input import IntegerInput
-from ui.dashboard.input_controls import FocusClearingWidget
+from app.settings.model import SettingsSnapshot
+from ui.settings.widgets.number_input import IntegerInput
+from ui.settings.widgets.input_controls import FocusClearingWidget
 
 
 class AppearancePage(QScrollArea):
@@ -17,25 +17,25 @@ class AppearancePage(QScrollArea):
         self.setFrameShape(QScrollArea.NoFrame)
 
         content = FocusClearingWidget()
-        content.setObjectName("dashboardPageContent")
+        content.setObjectName("settingsPageContent")
         layout = QVBoxLayout(content)
         layout.setContentsMargins(32, 28, 32, 28)
         layout.setSpacing(18)
 
         heading = QLabel("外觀")
-        heading.setObjectName("dashboardPageHeading")
+        heading.setObjectName("settingsPageHeading")
         layout.addWidget(heading)
         description = QLabel("調整桌寵尺寸。按下套用後才會儲存並更新桌寵。")
-        description.setObjectName("dashboardPageDescription")
+        description.setObjectName("settingsPageDescription")
         description.setWordWrap(True)
         layout.addWidget(description)
 
         card = QWidget()
-        card.setObjectName("dashboardSettingsCard")
+        card.setObjectName("settingsCard")
         card_layout = QVBoxLayout(card)
         card_layout.setContentsMargins(20, 18, 20, 18)
         title = QLabel("桌寵尺寸")
-        title.setObjectName("dashboardSectionTitle")
+        title.setObjectName("settingsSectionTitle")
         card_layout.addWidget(title)
         form = QFormLayout()
         form.setSpacing(14)
@@ -45,7 +45,7 @@ class AppearancePage(QScrollArea):
         form.addRow("高度：", self.height_input)
         card_layout.addLayout(form)
         hint = QLabel("可設定 100–1000 px；此處調整的是桌寵，不是設定視窗。")
-        hint.setObjectName("dashboardPageDescription")
+        hint.setObjectName("settingsPageDescription")
         hint.setWordWrap(True)
         card_layout.addWidget(hint)
         layout.addWidget(card)

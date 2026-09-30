@@ -6,10 +6,10 @@ from PySide6.QtWidgets import (
     QScrollArea, QVBoxLayout, QWidget, QPushButton, QHBoxLayout,
 )
 
-from app.settings import ApiKeyEntry, SettingsSnapshot
-from ui.dashboard.number_input import DecimalInput, IntegerInput
-from ui.dashboard.api_group_editor import APIGroupEditor
-from ui.dashboard.input_controls import FocusClearingWidget, NoWheelCheckBox
+from app.settings.model import ApiKeyEntry, SettingsSnapshot
+from ui.settings.widgets.number_input import DecimalInput, IntegerInput
+from ui.settings.widgets.api_group_editor import APIGroupEditor
+from ui.settings.widgets.input_controls import FocusClearingWidget, NoWheelCheckBox
 
 
 class AIPage(QScrollArea):
@@ -23,28 +23,28 @@ class AIPage(QScrollArea):
         self.setWidgetResizable(True)
         self.setFrameShape(QScrollArea.NoFrame)
         content = FocusClearingWidget()
-        content.setObjectName("dashboardPageContent")
+        content.setObjectName("settingsPageContent")
         layout = QVBoxLayout(content)
         layout.setContentsMargins(32, 28, 32, 28)
         layout.setSpacing(18)
         heading = QLabel("AI")
-        heading.setObjectName("dashboardPageHeading")
+        heading.setObjectName("settingsPageHeading")
         layout.addWidget(heading)
         description = QLabel("管理模型與對話記憶。修改後按下套用才會儲存。")
-        description.setObjectName("dashboardPageDescription")
+        description.setObjectName("settingsPageDescription")
         description.setWordWrap(True)
         layout.addWidget(description)
 
         self.group_error_label = QLabel()
         self.group_error_label.setWordWrap(True)
-        self.group_error_label.setObjectName("dashboardPageDescription")
+        self.group_error_label.setObjectName("settingsPageDescription")
         self.group_error_label.hide()
         layout.addWidget(self.group_error_label)
         self.group_editor = APIGroupEditor()
         layout.addWidget(self.group_editor)
         legacy_notice = QLabel("目前正式聊天及下方連線測試仍使用這份舊設定。上方群組設定尚未接入正式呼叫。")
         legacy_notice.setWordWrap(True)
-        legacy_notice.setObjectName("dashboardPageDescription")
+        legacy_notice.setObjectName("settingsPageDescription")
         layout.addWidget(legacy_notice)
         self._legacy_notice = legacy_notice
 
@@ -61,7 +61,7 @@ class AIPage(QScrollArea):
         self.add_api_key_button.clicked.connect(lambda: self.add_api_key_row())
         key_form.addRow(self.add_api_key_button)
         key_note = QLabel("金鑰以遮蔽方式顯示。測試使用目前輸入，不會自動儲存，且可能消耗服務額度。")
-        key_note.setObjectName("dashboardPageDescription")
+        key_note.setObjectName("settingsPageDescription")
         key_note.setWordWrap(True)
         key_form.addRow(key_note)
 
@@ -116,11 +116,11 @@ class AIPage(QScrollArea):
     @staticmethod
     def _card(layout, title):
         card = QWidget()
-        card.setObjectName("dashboardSettingsCard")
+        card.setObjectName("settingsCard")
         card_layout = QVBoxLayout(card)
         card_layout.setContentsMargins(20, 18, 20, 18)
         heading = QLabel(title)
-        heading.setObjectName("dashboardSectionTitle")
+        heading.setObjectName("settingsSectionTitle")
         card_layout.addWidget(heading)
         form = QFormLayout()
         form.setSpacing(14)
@@ -141,9 +141,6 @@ class AIPage(QScrollArea):
             "history_limit": self.history_limit_input.value(),
             "conversation_summary_enabled": self.conversation_summary_check.isChecked(),
         }
-        if self._group_mode:
-            for field in ("api_keys", "base_url", "model", "temperature"):
-                values.pop(field)
         self.settings_changed.emit(values)
 
     def set_group_mode(self, enabled):
@@ -196,12 +193,12 @@ class AIPage(QScrollArea):
         key_input.setAccessibleName("API Key")
         test_button = QPushButton("測試")
         remove_button = QPushButton("刪除")
-        remove_button.setObjectName("dashboardDangerButton")
+        remove_button.setObjectName("settingsDangerButton")
         for widget in (name_input, key_input, test_button, remove_button):
             fields.addWidget(widget)
         layout.addLayout(fields)
         status = QLabel("")
-        status.setObjectName("dashboardPageDescription")
+        status.setObjectName("settingsPageDescription")
         status.setWordWrap(True)
         status.hide()
         layout.addWidget(status)
@@ -234,18 +231,8 @@ class AIPage(QScrollArea):
             self._emit_settings(None)
 
     def collect_api_key_entries(self):
-        entries = []
-        for row in self.api_key_rows:
-            key = row["key_input"].text().strip()
-            if key:
-                name = row["name_input"].text().strip() or f"Key {len(entries) + 1}"
-                entries.append(ApiKeyEntry(name, key))
-        return tuple(entries)
-
-    def connection_fingerprint(self, row_id, verify_ssl):
-        row = self.row_for_id(row_id)
-        return (self.base_url_input.text().strip(), self.model_input.text().strip(),
-                row["key_input"].text().strip(), verify_ssl)
+        return tuple(ApiKeyEntry(row["name_input"].text(), row["key_input"].text())
+                     for row in self.api_key_rows)
 
     def begin_test(self, row_id):
         row = self.row_for_id(row_id)

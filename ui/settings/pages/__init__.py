@@ -1,4 +1,4 @@
-"""Dashboard content pages."""
+"""Settings content pages."""
 
 from .general_page import GeneralPage
 from .appearance_page import AppearancePage

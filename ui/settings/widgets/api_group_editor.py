@@ -1,8 +1,4 @@
-"""Draft-only API group editor; persistence belongs to DashboardWindow."""
-import os
-from uuid import uuid4
-from urllib.parse import urlsplit
-
+"""API group form: widget state and raw input events only."""
 from PySide6.QtCore import Signal, Qt
 from PySide6.QtWidgets import (
     QBoxLayout, QFormLayout, QGridLayout, QHBoxLayout, QLabel, QLineEdit, QMenu,
@@ -10,16 +6,16 @@ from PySide6.QtWidgets import (
 )
 
 from app.settings.api_groups import APIGroup, APIGroupKey, APIGroupSettings
-from app.settings.api_group_resolver import APIGroupResolutionError, resolve_api_request
-from app.settings.model import SettingsValidationError
-from ui.dashboard.number_input import DecimalInput
-from ui.dashboard.input_controls import NoWheelCheckBox, NoWheelComboBox, ToggleSwitch
-from ui.dashboard.dialogs import DashboardDialog
+from ui.settings.widgets.number_input import DecimalInput
+from ui.settings.widgets.input_controls import NoWheelCheckBox, NoWheelComboBox, ToggleSwitch
 
 
 class APIGroupEditor(QWidget):
     settings_changed = Signal(object)
     test_requested = Signal(str, str)
+    add_group_requested = Signal()
+    add_key_requested = Signal(str)
+    delete_group_requested = Signal(str)
     RESPONSIVE_WIDTH = 600
 
     def __init__(self, parent=None):
@@ -38,14 +34,14 @@ class APIGroupEditor(QWidget):
         master_detail.setSpacing(14)
         self.master_detail_layout = master_detail
         self.group_list_pane = QWidget()
-        self.group_list_pane.setObjectName("dashboardApiGroupList")
+        self.group_list_pane.setObjectName("settingsApiGroupList")
         self.group_list_pane.setMinimumWidth(180)
         self.group_list_pane.setMaximumWidth(230)
         list_layout = QVBoxLayout(self.group_list_pane)
         list_layout.setContentsMargins(12, 12, 12, 12)
         list_layout.setSpacing(8)
         list_heading = QLabel("API 管理")
-        list_heading.setObjectName("dashboardSectionTitle")
+        list_heading.setObjectName("settingsSectionTitle")
         list_layout.addWidget(list_heading)
         self.add_group_button = QPushButton("新增 API 群組")
         self.add_group_button.clicked.connect(lambda: self.add_group())
@@ -57,13 +53,13 @@ class APIGroupEditor(QWidget):
         master_detail.addWidget(self.group_list_pane)
 
         self.detail_stack = QStackedWidget()
-        self.detail_stack.setObjectName("dashboardApiGroupDetails")
+        self.detail_stack.setObjectName("settingsApiGroupDetails")
         empty = QWidget()
         empty_layout = QVBoxLayout(empty)
         empty_label = QLabel("尚未建立 API 群組。請從左側新增一個群組。")
         empty_label.setAlignment(Qt.AlignCenter)
         empty_label.setWordWrap(True)
-        empty_label.setObjectName("dashboardPlaceholderStatus")
+        empty_label.setObjectName("settingsPlaceholderStatus")
         empty_layout.addWidget(empty_label)
         self.empty_detail = empty
         self.detail_stack.addWidget(empty)
@@ -72,7 +68,7 @@ class APIGroupEditor(QWidget):
         self.state_label = QLabel()
         self.state_label.setTextFormat(Qt.PlainText)
         self.state_label.setWordWrap(True)
-        self.state_label.setObjectName("dashboardPageDescription")
+        self.state_label.setObjectName("settingsPageDescription")
         layout.addWidget(self.state_label)
         self._update_responsive_layout()
 
@@ -105,33 +101,34 @@ class APIGroupEditor(QWidget):
         self._update_titles()
 
     def add_group(self, group=None):
-        is_new = group is None
         if group is None:
-            group = APIGroup(str(uuid4()), "新 API 群組", "https://api.openai.com/v1", "gpt-4o-mini")
+            self.add_group_requested.emit()
+            return self.group_for_id(self._selected_id)
+        is_new = not self._loading
         list_button = QPushButton()
         list_button.setCheckable(True)
-        list_button.setObjectName("dashboardApiGroupButton")
+        list_button.setObjectName("settingsApiGroupButton")
         list_button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         list_button.setMinimumHeight(58)
         list_button.setAccessibleName(f"編輯 API 群組 {group.name}")
         self.group_list_layout.addWidget(list_button)
         container = QWidget()
-        container.setObjectName("dashboardApiGroupDetailsContent")
+        container.setObjectName("settingsApiGroupDetailsContent")
         layout = QVBoxLayout(container)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(12)
 
         summary_card = QWidget()
-        summary_card.setObjectName("dashboardSettingsCard")
+        summary_card.setObjectName("settingsCard")
         summary_layout = QVBoxLayout(summary_card)
         summary_layout.setContentsMargins(18, 16, 18, 16)
         summary_layout.setSpacing(8)
         header = QHBoxLayout()
         title = QLabel()
-        title.setObjectName("dashboardSectionTitle")
+        title.setObjectName("settingsSectionTitle")
         title.setWordWrap(True)
         active_badge = QLabel("目前使用")
-        active_badge.setObjectName("dashboardStatusBadge")
+        active_badge.setObjectName("settingsStatusBadge")
         edit_button = QPushButton("編輯")
         edit_button.setCheckable(True)
         more_button = QPushButton("⋯")
@@ -148,22 +145,22 @@ class APIGroupEditor(QWidget):
         header.addWidget(more_button)
         summary_layout.addLayout(header)
         summary_url = QLabel()
-        summary_url.setObjectName("dashboardSummaryPrimary")
+        summary_url.setObjectName("settingsSummaryPrimary")
         summary_url.setWordWrap(True)
         summary_meta = QLabel()
-        summary_meta.setObjectName("dashboardPageDescription")
+        summary_meta.setObjectName("settingsPageDescription")
         summary_meta.setWordWrap(True)
         summary_layout.addWidget(summary_url)
         summary_layout.addWidget(summary_meta)
         layout.addWidget(summary_card)
 
         group_edit_body = QWidget()
-        group_edit_body.setObjectName("dashboardSettingsCard")
+        group_edit_body.setObjectName("settingsCard")
         group_edit_layout = QVBoxLayout(group_edit_body)
         group_edit_layout.setContentsMargins(18, 16, 18, 16)
         group_edit_layout.setSpacing(10)
         group_edit_heading = QLabel("群組設定")
-        group_edit_heading.setObjectName("dashboardSectionTitle")
+        group_edit_heading.setObjectName("settingsSectionTitle")
         group_edit_layout.addWidget(group_edit_heading)
         group_form = QFormLayout()
         group_form.setRowWrapPolicy(QFormLayout.WrapLongRows)
@@ -171,7 +168,7 @@ class APIGroupEditor(QWidget):
         name = QLineEdit(group.name)
         url = QLineEdit(group.base_url)
         url_note = QLabel("請填 API 根路徑，程式會自動附加 /chat/completions。")
-        url_note.setObjectName("dashboardPageDescription")
+        url_note.setObjectName("settingsPageDescription")
         url_note.setWordWrap(True)
         model = QLineEdit(group.model)
         temperature = DecimalInput()
@@ -197,7 +194,7 @@ class APIGroupEditor(QWidget):
         test_status.setTextFormat(Qt.PlainText)
         test_status.setWordWrap(True)
         test_note = QLabel("連線測試會送出真實請求，可能產生服務費用。")
-        test_note.setObjectName("dashboardPageDescription")
+        test_note.setObjectName("settingsPageDescription")
         test_note.setWordWrap(True)
         group_edit_layout.addWidget(test_button)
         group_edit_layout.addWidget(test_note)
@@ -206,12 +203,12 @@ class APIGroupEditor(QWidget):
         layout.addWidget(group_edit_body)
 
         model_card = QWidget()
-        model_card.setObjectName("dashboardSettingsCard")
+        model_card.setObjectName("settingsCard")
         model_layout = QVBoxLayout(model_card)
         model_layout.setContentsMargins(18, 16, 18, 16)
         model_layout.setSpacing(10)
         model_heading = QLabel("模型設定")
-        model_heading.setObjectName("dashboardSectionTitle")
+        model_heading.setObjectName("settingsSectionTitle")
         model_layout.addWidget(model_heading)
         model_form = QFormLayout()
         model_form.setRowWrapPolicy(QFormLayout.WrapLongRows)
@@ -223,13 +220,13 @@ class APIGroupEditor(QWidget):
         layout.addWidget(model_card)
 
         key_card = QWidget()
-        key_card.setObjectName("dashboardSettingsCard")
+        key_card.setObjectName("settingsCard")
         key_card_layout = QVBoxLayout(key_card)
         key_card_layout.setContentsMargins(18, 16, 18, 16)
         key_card_layout.setSpacing(10)
         key_header = QHBoxLayout()
         key_count = QLabel()
-        key_count.setObjectName("dashboardSectionTitle")
+        key_count.setObjectName("settingsSectionTitle")
         key_header.addWidget(key_count, 1)
         add_key = QPushButton("新增 Key")
         key_header.addWidget(add_key)
@@ -266,12 +263,10 @@ class APIGroupEditor(QWidget):
         add_key.clicked.connect(lambda: self.add_key(group.id))
         for control in (name, url, model):
             control.textChanged.connect(self._changed)
-        url.textChanged.connect(lambda: self._update_url_note(row))
         temperature.valueChanged.connect(self._changed)
         ssl.toggled.connect(self._changed)
         mode.currentIndexChanged.connect(self._changed)
         self._changed()
-        self._update_url_note(row)
         self._arrange_all_keys()
         return row
 
@@ -292,9 +287,11 @@ class APIGroupEditor(QWidget):
         group = self.group_for_id(group_id)
         if group is None:
             return
-        entry = entry or APIGroupKey(str(uuid4()), "", "")
+        if entry is None:
+            self.add_key_requested.emit(group_id)
+            return group["keys"][-1] if group["keys"] else None
         container = QWidget()
-        container.setObjectName("dashboardApiKeyRow")
+        container.setObjectName("settingsApiKeyRow")
         layout = QGridLayout(container)
         layout.setContentsMargins(12, 10, 12, 10)
         layout.setHorizontalSpacing(10)
@@ -307,7 +304,7 @@ class APIGroupEditor(QWidget):
         source.addItem("環境變數 OPENAI_API_KEY", "environment")
         source.setCurrentIndex(source.findData(entry.source))
         source_badge = QLabel("環境變數")
-        source_badge.setObjectName("dashboardStatusBadge")
+        source_badge.setObjectName("settingsStatusBadge")
         key = QLineEdit(entry.key)
         key.setEchoMode(QLineEdit.Password)
         key.setAccessibleName("群組 API Key")
@@ -351,7 +348,7 @@ class APIGroupEditor(QWidget):
         delete_action = menu.addAction("刪除 Key")
         more.setMenu(menu)
         status = QLabel()
-        status.setObjectName("dashboardPageDescription")
+        status.setObjectName("settingsPageDescription")
         status.setWordWrap(True)
         test_button = QPushButton("測試")
         test_status = QLabel()
@@ -390,11 +387,8 @@ class APIGroupEditor(QWidget):
             show.setEnabled(is_stored)
             if not is_stored:
                 show.setChecked(False)
-            available = bool(os.environ.get("OPENAI_API_KEY", "").strip()) if not is_stored else False
             source_badge.setVisible(not is_stored)
             enabled_text.setText("啟用中" if enabled.isChecked() else "已停用")
-            status.setText(("環境來源已設定（不顯示或保存內容）" if available else "環境來源尚無值") if not is_stored
-                           else ("啟用" if enabled.isChecked() else "X：已暫停，原順位保留"))
             self._changed()
 
         def reveal(checked):
@@ -440,14 +434,7 @@ class APIGroupEditor(QWidget):
             self._changed()
 
     def confirm_delete_group(self, group_id):
-        active = group_id == self._active_id
-        message = "確定刪除此群組及其金鑰嗎？"
-        if active:
-            message += "目前群組將變為未設定，請再選擇替代群組。"
-        if DashboardDialog.question(self, "刪除 API 群組", message,
-                                    DashboardDialog.Yes | DashboardDialog.No,
-                                    DashboardDialog.No) == DashboardDialog.Yes:
-            self.remove_group(group_id)
+        self.delete_group_requested.emit(group_id)
 
     def remove_group(self, group_id):
         row = self.group_for_id(group_id)
@@ -468,27 +455,25 @@ class APIGroupEditor(QWidget):
                                  if self.group_rows else None)
         self._changed()
 
-    def validate_draft(self):
+    def show_feedback(self, feedback):
+        self.state_label.setText(feedback.status)
+        self.state_label.setVisible(bool(feedback.status))
         for row in self.group_rows:
-            path = urlsplit(row["url"].text().strip()).path.rstrip("/").lower()
-            if path.endswith("/chat/completions"):
-                raise SettingsValidationError(
-                    "Base URL 請填 API 根路徑，不要包含 /chat/completions。"
-                )
-
-    def _update_url_note(self, row):
-        path = urlsplit(row["url"].text().strip()).path.rstrip("/").lower()
-        duplicate = path.endswith("/chat/completions")
-        row["url_note"].setText(
-            "請移除 /chat/completions；程式會自動附加此路徑。"
-            if duplicate else "請填 API 根路徑，程式會自動附加 /chat/completions。"
-        )
-        row["url_note"].setProperty("validationError", duplicate)
-        row["url_note"].setStyleSheet(
-            "color: #b3261e; font-weight: 600;" if duplicate else ""
-        )
-        if duplicate:
-            row["advanced_button"].setChecked(True)
+            duplicate = row["id"] in feedback.completion_path_groups
+            row["url_note"].setText(
+                "請移除 /chat/completions；程式會自動附加此路徑。"
+                if duplicate else "請填 API 根路徑，程式會自動附加 /chat/completions。"
+            )
+            row["url_note"].setProperty("validationError", duplicate)
+            row["url_note"].setStyleSheet("color: #b3261e; font-weight: 600;" if duplicate else "")
+            if duplicate:
+                row["advanced_button"].setChecked(True)
+            for entry in row["keys"]:
+                if entry["source"].currentData() == "environment":
+                    text = "環境來源已設定（不顯示或保存內容）" if feedback.environment_available else "環境來源尚無值"
+                else:
+                    text = "啟用" if entry["enabled"].isChecked() else "X：已暫停，原順位保留"
+                entry["status"].setText(text)
 
     def _set_advanced_visible(self, row, visible):
         row["advanced_body"].setVisible(visible)
@@ -542,22 +527,20 @@ class APIGroupEditor(QWidget):
             layout.setColumnStretch(2, 1)
 
     def collect_settings(self):
+        """Return raw form values; application code normalizes and validates them."""
         groups = []
         for row in self.group_rows:
-            keys = []
-            for entry in row["keys"]:
-                source = entry["source"].currentData()
-                value = entry["key"].text().strip() if source == "stored" else ""
-                if source == "stored" and not value:
-                    continue
-                keys.append(APIGroupKey(entry["id"], entry["name"].text().strip() or f"Key {len(keys) + 1}",
-                                        value, entry["priority"].currentData(), entry["enabled"].isChecked(), source,
-                                        "OPENAI_API_KEY" if source == "environment" else ""))
-            groups.append(APIGroup(row["id"], row["name"].text().strip(), row["url"].text().strip(),
-                                   row["model"].text().strip(),
-                                   (row["original_temperature"] if row["temperature"].value() == row["display_temperature"]
-                                    else row["temperature"].value()),
-                                   row["ssl"].isChecked(), row["mode"].currentData(), tuple(keys)))
+            keys = tuple(APIGroupKey(
+                entry["id"], entry["name"].text(), entry["key"].text(),
+                entry["priority"].currentData(), entry["enabled"].isChecked(),
+                entry["source"].currentData(),
+            ) for entry in row["keys"])
+            groups.append(APIGroup(
+                row["id"], row["name"].text(), row["url"].text(), row["model"].text(),
+                (row["original_temperature"] if row["temperature"].value() == row["display_temperature"]
+                 else row["temperature"].value()),
+                row["ssl"].isChecked(), row["mode"].currentData(), keys,
+            ))
         return APIGroupSettings(tuple(groups), self._active_id, self._schema_version)
 
     def commit_pending_input(self):
@@ -588,8 +571,6 @@ class APIGroupEditor(QWidget):
         for row, group in zip(self.group_rows, settings.groups):
             active = row["id"] == self._active_id
             selected = row["id"] == self._selected_id
-            enabled_count = sum(entry.enabled for entry in group.keys)
-            mode = "免金鑰" if row["mode"].currentData() == "none" else f"啟用 Key：{enabled_count}"
             name = row["name"].text().strip() or "未命名"
             row["title"].setText(name)
             row["active_badge"].setVisible(active)
@@ -623,10 +604,3 @@ class APIGroupEditor(QWidget):
                 entry["test_button"].setEnabled(not none and not entry["testing"])
         selected_row = self.group_for_id(self._selected_id)
         self.detail_stack.setCurrentWidget(selected_row["container"] if selected_row else self.empty_detail)
-        try:
-            resolve_api_request(settings)
-            status = ""
-        except APIGroupResolutionError as error:
-            status = str(error)
-        self.state_label.setText(status)
-        self.state_label.setVisible(bool(status))

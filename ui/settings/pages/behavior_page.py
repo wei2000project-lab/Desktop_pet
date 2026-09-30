@@ -3,9 +3,9 @@ from PySide6.QtWidgets import (
     QFormLayout, QLabel, QScrollArea, QVBoxLayout, QWidget,
 )
 
-from app.settings import SettingsSnapshot
-from ui.dashboard.number_input import IntegerInput
-from ui.dashboard.input_controls import FocusClearingWidget
+from app.settings.model import SettingsSnapshot
+from ui.settings.widgets.number_input import IntegerInput
+from ui.settings.widgets.input_controls import FocusClearingWidget
 
 
 class BehaviorPage(QScrollArea):
@@ -17,25 +17,25 @@ class BehaviorPage(QScrollArea):
         self.setFrameShape(QScrollArea.NoFrame)
 
         content = FocusClearingWidget()
-        content.setObjectName("dashboardPageContent")
+        content.setObjectName("settingsPageContent")
         layout = QVBoxLayout(content)
         layout.setContentsMargins(32, 28, 32, 28)
         layout.setSpacing(18)
 
         heading = QLabel("行為")
-        heading.setObjectName("dashboardPageHeading")
+        heading.setObjectName("settingsPageHeading")
         layout.addWidget(heading)
         description = QLabel("管理桌寵待機時進入閱讀狀態的等待時間。")
-        description.setObjectName("dashboardPageDescription")
+        description.setObjectName("settingsPageDescription")
         description.setWordWrap(True)
         layout.addWidget(description)
 
         card = QWidget()
-        card.setObjectName("dashboardSettingsCard")
+        card.setObjectName("settingsCard")
         card_layout = QVBoxLayout(card)
         card_layout.setContentsMargins(20, 18, 20, 18)
         title = QLabel("閱讀待機")
-        title.setObjectName("dashboardSectionTitle")
+        title.setObjectName("settingsSectionTitle")
         card_layout.addWidget(title)
 
         form = QFormLayout()
@@ -50,7 +50,7 @@ class BehaviorPage(QScrollArea):
         card_layout.addLayout(form)
 
         hint = QLabel("可設定 10–3600 秒。按下套用才會儲存；不會改變閱讀動畫本身。")
-        hint.setObjectName("dashboardPageDescription")
+        hint.setObjectName("settingsPageDescription")
         hint.setWordWrap(True)
         card_layout.addWidget(hint)
         layout.addWidget(card)

@@ -3,7 +3,7 @@ from PySide6.QtCore import Signal
 from PySide6.QtWidgets import (
     QAbstractSpinBox, QDoubleSpinBox, QHBoxLayout, QPushButton, QSpinBox, QWidget,
 )
-from ui.dashboard.input_controls import finish_input
+from ui.settings.widgets.input_controls import finish_input
 
 
 class _NumberInput(QWidget):
@@ -18,7 +18,7 @@ class _NumberInput(QWidget):
         self.minus_button = QPushButton("−")
         self.plus_button = QPushButton("＋")
         for button, name in ((self.minus_button, "減少"), (self.plus_button, "增加")):
-            button.setObjectName("dashboardNumberStepButton")
+            button.setObjectName("settingsNumberStepButton")
             button.setFixedSize(36, 36)
             button.setAccessibleName(name)
             button.setToolTip(name)
