@@ -132,6 +132,20 @@ QLabel[validationError="true"] {
 #settingsCard QPushButton:focus {
     border: 2px solid #7b4ba0;
 }
+QPushButton#settingsApiGroupEditButton {
+    background-color: #ffffff;
+    color: #514b59;
+    border: 2px solid #cfcad4;
+    border-radius: 6px;
+    min-width: 52px;
+    min-height: 28px;
+    padding: 0 12px;
+}
+QPushButton#settingsApiGroupEditButton:hover,
+QPushButton#settingsApiGroupEditButton:checked {
+    background-color: #ece8f2;
+    border-color: #7b4ba0;
+}
 QPushButton#settingsNumberStepButton {
     background-color: #ffffff;
     border: 1px solid #cfcad4;

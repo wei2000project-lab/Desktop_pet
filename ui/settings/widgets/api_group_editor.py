@@ -130,6 +130,7 @@ class APIGroupEditor(QWidget):
         active_badge = QLabel("目前使用")
         active_badge.setObjectName("settingsStatusBadge")
         edit_button = QPushButton("編輯")
+        edit_button.setObjectName("settingsApiGroupEditButton")
         edit_button.setCheckable(True)
         more_button = QPushButton("⋯")
         more_button.setAccessibleName("群組其他操作")
