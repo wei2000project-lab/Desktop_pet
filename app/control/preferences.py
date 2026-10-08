@@ -1,11 +1,11 @@
 import json
 from pathlib import Path
 
-from app.core.paths import RUNTIME_DIR
+from app.core.paths import PROJECT_PATHS
 
 
 def default_app_preferences_path() -> Path:
-    return RUNTIME_DIR / "preferences.json"
+    return PROJECT_PATHS.preferences_json
 
 
 class AppPreferenceStore:

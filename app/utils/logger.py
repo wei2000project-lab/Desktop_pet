@@ -2,7 +2,7 @@ import os
 import logging
 from logging.handlers import RotatingFileHandler
 
-from app.core.paths import LOGS_DIR
+from app.core.paths import PROJECT_PATHS
 
 def setup_logger(name: str = "nova", log_file: str = "logs/app.log", level: int = logging.INFO) -> logging.Logger:
     """Sets up a logger that outputs to both console and a file."""
@@ -39,7 +39,7 @@ def setup_logger(name: str = "nova", log_file: str = "logs/app.log", level: int 
     return logger
 
 # Default log file remains under the repository root after package moves.
-default_log_path = str(LOGS_DIR / "app.log")
+default_log_path = str(PROJECT_PATHS.app_log)
 
 # Default app logger instance
 logger = setup_logger(log_file=default_log_path)

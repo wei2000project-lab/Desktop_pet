@@ -9,7 +9,7 @@ from typing import Any, Dict, List
 
 from app.ai.api_keys import decode_api_key_entries, encode_api_key_entries, first_api_key
 from app.core.data_migration import migrate_legacy_runtime_data
-from app.core.paths import API_GROUPS_JSON_PATH, CONFIG_DIR, PROJECT_ROOT, RUNTIME_DIR
+from app.core.paths import PROJECT_PATHS, ProjectPaths
 from app.utils.logger import logger
 
 
@@ -121,28 +121,39 @@ class ConfigManager:
             cls._instance._init()
         return cls._instance
 
-    def _init(self):
-        migration = migrate_legacy_runtime_data()
+    def _init(self, paths: ProjectPaths = PROJECT_PATHS):
+        migration = migrate_legacy_runtime_data(
+            legacy_dir=paths.legacy_config_dir,
+            runtime_dir=paths.runtime_dir,
+        )
         if migration.failed:
             logger.warning("Runtime data migration incomplete: %s", ", ".join(migration.failed))
 
-        self.root_dir = str(PROJECT_ROOT)
-        self.config_dir = str(CONFIG_DIR)
-        self.default_config_ini_path = str(CONFIG_DIR / "app.defaults.ini")
-        self.config_ini_path = str(RUNTIME_DIR / "app.ini")
-        self.api_ini_path = str(RUNTIME_DIR / "api.ini")
-        self.api_groups_json_path = str(API_GROUPS_JSON_PATH)
-        self.default_prompt_json_path = str(CONFIG_DIR / "prompt.json")
-        self.prompt_json_path = str(RUNTIME_DIR / "prompt.json")
-        self.history_json_path = str(RUNTIME_DIR / "history.json")
-        self.memory_json_path = str(RUNTIME_DIR / "memory.json")
-        self.env_path = str(PROJECT_ROOT / ".env")
+        self._configure_paths(paths)
 
         self.general_config = configparser.ConfigParser()
         self.api_config = configparser.ConfigParser()
 
         self.load_env()
         self.load_configs()
+
+    def _configure_paths(self, paths: ProjectPaths) -> None:
+        """Set file locations without reading or creating data."""
+        self.root_dir = str(paths.project_root)
+        self.config_dir = str(paths.config_dir)
+        self.default_config_ini_path = str(paths.default_app_ini)
+        self.config_ini_path = str(paths.app_ini)
+        self.api_ini_path = str(paths.legacy_api_ini)
+        self.api_groups_json_path = str(paths.api_groups_json)
+        self.default_prompt_json_path = str(paths.default_prompt_json)
+        self.prompt_json_path = str(paths.prompt_json)
+        self.tools_json_path = str(paths.tools_json)
+        self.history_json_path = str(paths.history_json)
+        self.memory_json_path = str(paths.memory_json)
+        self.env_path = str(paths.env_file)
+
+    def _tools_path(self) -> Path:
+        return Path(self.tools_json_path)
 
     def load_env(self):
         """Loads simple key-value pairs from .env into os.environ if it exists."""

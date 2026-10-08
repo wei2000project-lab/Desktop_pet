@@ -159,6 +159,7 @@ class GroupPersistenceTests(unittest.TestCase):
         self.store = object.__new__(ConfigManager)
         self.store.api_groups_json_path = str(self.root / "api_groups.json")
         self.store.config_ini_path = str(self.root / "app.ini")
+        self.store.tools_json_path = str(self.root / "tools.json")
         self.store.api_ini_path = str(self.root / "api.ini")
         self.store.prompt_json_path = str(self.root / "prompt.json")
         self.store.default_prompt_json_path = str(self.root / "missing-defaults.json")

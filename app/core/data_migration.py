@@ -7,7 +7,7 @@ import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
-from app.core.paths import PROJECT_ROOT, RUNTIME_DIR
+from app.core.paths import PROJECT_PATHS
 
 
 LEGACY_RUNTIME_FILES = {
@@ -36,8 +36,8 @@ def migrate_legacy_runtime_data(
 
     Legacy files are deliberately retained until manual validation is complete.
     """
-    source_dir = Path(legacy_dir) if legacy_dir is not None else PROJECT_ROOT / "config"
-    destination_dir = Path(runtime_dir) if runtime_dir is not None else RUNTIME_DIR
+    source_dir = Path(legacy_dir) if legacy_dir is not None else PROJECT_PATHS.legacy_config_dir
+    destination_dir = Path(runtime_dir) if runtime_dir is not None else PROJECT_PATHS.runtime_dir
     destination_dir.mkdir(parents=True, exist_ok=True)
     migrated, skipped, failed = [], [], []
 

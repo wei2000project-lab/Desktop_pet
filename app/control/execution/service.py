@@ -8,12 +8,12 @@ from app.control.resolution.selector import AppSelection
 from app.control.resolution.resolver import resolve_preference_change_from_text
 from app.control.preferences import AppPreferenceStore, default_app_preferences_path
 from app.control.discovery.scanner import default_start_menu_roots, scan_available_apps
-from app.core.paths import RUNTIME_DIR
+from app.core.paths import PROJECT_PATHS
 from app.utils.logger import logger
 
 
 def default_app_index_path() -> Path:
-    return RUNTIME_DIR / "apps.json"
+    return PROJECT_PATHS.apps_json
 
 
 class AppOpenService:

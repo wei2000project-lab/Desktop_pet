@@ -11,6 +11,8 @@ from app.core.paths import (
     PET_ASSETS_DIR,
     PET_EMOTIONS_DIR,
     PROJECT_ROOT,
+    PROJECT_PATHS,
+    ProjectPaths,
     RUNTIME_DIR,
 )
 
@@ -39,6 +41,28 @@ class ProjectPathsTests(unittest.TestCase):
         from app.utils import logger as logger_module
 
         self.assertEqual(Path(logger_module.default_log_path), LOGS_DIR / "app.log")
+
+    def test_injected_roots_cover_every_current_data_file_without_creating_them(self):
+        root = PROJECT_ROOT / "__path_mapping_test__"
+        runtime = root / "test-user-data"
+        paths = ProjectPaths(root / "checkout", runtime)
+
+        self.assertEqual(paths.default_app_ini, root / "checkout/data/config/app.defaults.ini")
+        self.assertEqual(paths.default_prompt_json, root / "checkout/data/config/prompt.json")
+        self.assertEqual(paths.app_aliases_json, root / "checkout/data/app_control/aliases.json")
+        self.assertEqual(paths.app_ini, runtime / "app.ini")
+        self.assertEqual(paths.legacy_api_ini, runtime / "api.ini")
+        self.assertEqual(paths.api_groups_json, runtime / "api_groups.json")
+        self.assertEqual(paths.prompt_json, runtime / "prompt.json")
+        self.assertEqual(paths.tools_json, runtime / "tools.json")
+        self.assertEqual(paths.history_json, runtime / "history.json")
+        self.assertEqual(paths.memory_json, runtime / "memory.json")
+        self.assertEqual(paths.preferences_json, runtime / "preferences.json")
+        self.assertEqual(paths.apps_json, runtime / "apps.json")
+        self.assertEqual(paths.env_file, root / "checkout/.env")
+        self.assertEqual(paths.app_log, root / "checkout/logs/app.log")
+        self.assertFalse(runtime.exists())
+        self.assertEqual(PROJECT_PATHS.runtime_dir, RUNTIME_DIR)
 
 
 if __name__ == "__main__":

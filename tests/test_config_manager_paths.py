@@ -13,10 +13,20 @@ from app.core.config_manager import (
     read_layered_json,
     write_text_bundle_atomically,
 )
-from app.core.paths import CONFIG_DIR, PROJECT_ROOT, RUNTIME_DIR
+from app.core.paths import CONFIG_DIR, PROJECT_ROOT, RUNTIME_DIR, ProjectPaths
 
 
 class ConfigManagerPathTests(unittest.TestCase):
+    def test_tools_path_is_explicit_and_independent_of_app_ini_name(self):
+        root = PROJECT_ROOT / "__path_mapping_test__"
+        paths = ProjectPaths(root, root / "user-data")
+        manager = object.__new__(ConfigManager)
+        manager._configure_paths(paths)
+        manager.config_ini_path = str(root / "another-location" / "app.ini")
+
+        self.assertEqual(Path(manager.tools_json_path), paths.tools_json)
+        self.assertEqual(manager._tools_path(), paths.tools_json)
+
     def test_static_and_runtime_files_are_separated(self):
         self.assertEqual(Path(config_manager.default_config_ini_path), CONFIG_DIR / "app.defaults.ini")
         self.assertEqual(Path(config_manager.default_prompt_json_path), CONFIG_DIR / "prompt.json")

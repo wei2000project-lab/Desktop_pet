@@ -20,6 +20,8 @@ venv.bak/
 
 # Sensitive Configuration & API Keys (DO NOT COMMIT)
 config/api.ini
+config/config.ini
+config/prompt.json
 AI API URL.txt
 *.env
 *.key
