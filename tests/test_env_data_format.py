@@ -28,6 +28,7 @@ class EnvDataFormatTests(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
         self.paths = ProjectPaths(self.root, categorized_data=True)
+        self.paths.config_dir.mkdir(parents=True)
         self.store = object.__new__(ConfigManager)
         self.store._configure_paths(self.paths)
         self.store.general_config = configparser.ConfigParser()

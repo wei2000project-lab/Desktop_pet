@@ -8,7 +8,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from app.core.config_manager import ConfigManager
-from app.core.paths import API_GROUPS_JSON_PATH, RUNTIME_DIR
+from app.core.paths import API_GROUPS_JSON_PATH, CONFIG_DIR
 from app.settings import SettingsService, SettingsSnapshot
 from app.settings.api_group_service import APIGroupService
 from app.settings.api_groups import (
@@ -172,7 +172,7 @@ class GroupPersistenceTests(unittest.TestCase):
         self.path = Path(self.store.api_groups_json_path)
 
     def test_runtime_path_and_read_does_not_create_file(self):
-        self.assertEqual(API_GROUPS_JSON_PATH, RUNTIME_DIR / "api_groups.json")
+        self.assertEqual(API_GROUPS_JSON_PATH, CONFIG_DIR / "api_groups.json")
         self.assertIsNone(self.service.load())
         self.assertFalse(self.path.exists())
         self.assertEqual(self.events, [])

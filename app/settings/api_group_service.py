@@ -40,6 +40,8 @@ class APIGroupService:
 
     def migrate(self, environment=None) -> APIGroupSettings:
         """Explicit one-time operation; an empty valid file is already migrated."""
+        if getattr(self.store, "categorized_data", False) is True:
+            raise APIGroupDataError("分類後不再從舊 API 設定建立群組。")
         with api_group_lock:
             return self._migrate(environment)
 
@@ -65,5 +67,8 @@ class APIGroupService:
         """Migrate only missing files; never resurrect legacy settings after deletion."""
         from app.settings.api_group_resolver import resolve_api_request
 
+        if getattr(self.store, "categorized_data", False) is True:
+            return resolve_api_request(self.load(), environment=environment,
+                                       temperature_override=temperature_override)
         return resolve_api_request(self.migrate(environment), environment=environment,
                                    temperature_override=temperature_override)

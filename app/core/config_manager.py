@@ -122,12 +122,13 @@ class ConfigManager:
         return cls._instance
 
     def _init(self, paths: ProjectPaths = PROJECT_PATHS):
-        migration = migrate_legacy_runtime_data(
-            legacy_dir=paths.legacy_config_dir,
-            runtime_dir=paths.runtime_dir,
-        )
-        if migration.failed:
-            logger.warning("Runtime data migration incomplete: %s", ", ".join(migration.failed))
+        if not paths.categorized_data:
+            migration = migrate_legacy_runtime_data(
+                legacy_dir=paths.legacy_config_dir,
+                runtime_dir=paths.runtime_dir,
+            )
+            if migration.failed:
+                logger.warning("Runtime data migration incomplete: %s", ", ".join(migration.failed))
 
         self._configure_paths(paths)
 
@@ -139,6 +140,7 @@ class ConfigManager:
 
     def _configure_paths(self, paths: ProjectPaths) -> None:
         """Set file locations without reading or creating data."""
+        self.categorized_data = paths.categorized_data
         self.root_dir = str(paths.project_root)
         self.config_dir = str(paths.config_dir)
         self.default_config_ini_path = str(paths.default_app_ini)
@@ -200,7 +202,9 @@ class ConfigManager:
 
         # API Config
         self.api_config = configparser.ConfigParser()
-        if os.path.exists(self.api_ini_path):
+        if getattr(self, "categorized_data", False) is True:
+            self.api_config.add_section("API")
+        elif os.path.exists(self.api_ini_path):
             self.api_config.read(self.api_ini_path, encoding="utf-8")
         else:
             logger.warning("api.ini not found, using empty API config")
@@ -298,6 +302,8 @@ class ConfigManager:
         return first_api_key(self.get_api_key_entries())
 
     def save_api_config(self):
+        if getattr(self, "categorized_data", False) is True:
+            raise RuntimeError("分類後的設定不再寫入舊 API INI。")
         try:
             os.makedirs(os.path.dirname(self.api_ini_path), exist_ok=True)
             with open(self.api_ini_path, "w", encoding="utf-8") as f:
@@ -316,6 +322,8 @@ class ConfigManager:
         env_contents: str | None = None,
     ) -> None:
         """Persist one complete settings edit, rolling back if any file fails."""
+        if getattr(self, "categorized_data", False) is True and not preserve_legacy_api:
+            raise ValueError("分類後的設定不再寫入舊 API INI。")
         general_config = copy.deepcopy(self.general_config)
         api_config = copy.deepcopy(self.api_config)
         if not general_config.has_section("General"):

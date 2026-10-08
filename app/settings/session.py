@@ -30,11 +30,14 @@ class SettingsSession:
         try:
             groups = self.group_backend.load()
             if groups is None:
-                # Preview migration only: cancel must never create a file.
-                groups = migrate_legacy_api(
-                    self.group_backend.store.get_legacy_api_values(),
-                    bool(os.environ.get("OPENAI_API_KEY", "").strip()),
-                )
+                if getattr(self.group_backend.store, "categorized_data", False) is True:
+                    groups = APIGroupSettings(schema_version=ENV_SCHEMA_VERSION)
+                else:
+                    # Preview migration only: cancel must never create a file.
+                    groups = migrate_legacy_api(
+                        self.group_backend.store.get_legacy_api_values(),
+                        bool(os.environ.get("OPENAI_API_KEY", "").strip()),
+                    )
             return groups, None
         except SettingsValidationError as error:
             return APIGroupSettings(), str(error)

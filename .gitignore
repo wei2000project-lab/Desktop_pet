@@ -36,6 +36,7 @@ data/runtime/
 /data/config/prompt.user.json
 /data/config/api_groups.json
 /data/config/tools.json
+/data/config/.env
 /data/app_control/preferences.json
 /data/app_control/apps.json
 

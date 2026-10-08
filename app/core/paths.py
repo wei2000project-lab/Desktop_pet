@@ -1,6 +1,5 @@
 """Canonical locations for bundled assets and current user-owned data.
 
-The runtime root remains in the repository until the data migration phase.
 Callers can supply another root in tests without changing global constants.
 """
 from dataclasses import dataclass
@@ -88,7 +87,7 @@ class ProjectPaths:
 
     @property
     def env_file(self) -> Path:
-        return self.project_root / ".env"
+        return (self.config_dir if self.categorized_data else self.project_root) / ".env"
 
     @property
     def legacy_config_dir(self) -> Path:
@@ -100,8 +99,8 @@ class ProjectPaths:
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-# Keep the current layout active until existing data has been moved and verified.
-PROJECT_PATHS = ProjectPaths(PROJECT_ROOT)
+# Existing user data has been copied and verified in the categorized locations.
+PROJECT_PATHS = ProjectPaths(PROJECT_ROOT, categorized_data=True)
 
 ASSETS_DIR = PROJECT_ROOT / "assets"
 PET_ASSETS_DIR = ASSETS_DIR / "pet"

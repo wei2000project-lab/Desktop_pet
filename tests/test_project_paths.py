@@ -34,8 +34,9 @@ class ProjectPathsTests(unittest.TestCase):
         self.assertEqual(APP_CONTROL_DATA_DIR, DATA_DIR / "app_control")
         self.assertEqual(RUNTIME_DIR, DATA_DIR / "runtime")
 
-    def test_dotenv_location_can_be_derived_from_project_root(self):
-        self.assertEqual(PROJECT_ROOT / ".env", Path(__file__).resolve().parent.parent / ".env")
+    def test_active_dotenv_is_in_config_directory(self):
+        self.assertTrue(PROJECT_PATHS.categorized_data)
+        self.assertEqual(PROJECT_PATHS.env_file, CONFIG_DIR / ".env")
 
     def test_logger_still_writes_under_project_logs_directory(self):
         from app.utils import logger as logger_module
@@ -81,7 +82,7 @@ class ProjectPathsTests(unittest.TestCase):
         self.assertEqual(paths.history_json, runtime / "history.json")
         self.assertEqual(paths.memory_json, runtime / "memory.json")
         self.assertEqual(paths.legacy_api_ini, runtime / "api.ini")
-        self.assertEqual(paths.env_file, root / "checkout/.env")
+        self.assertEqual(paths.env_file, root / "checkout/data/config/.env")
         self.assertEqual(paths.app_log, root / "checkout/logs/app.log")
         self.assertFalse((root / "checkout").exists())
         self.assertFalse(runtime.exists())

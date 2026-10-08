@@ -45,12 +45,12 @@ class ConfigManagerPathTests(unittest.TestCase):
     def test_static_and_runtime_files_are_separated(self):
         self.assertEqual(Path(config_manager.default_config_ini_path), CONFIG_DIR / "app.defaults.ini")
         self.assertEqual(Path(config_manager.default_prompt_json_path), CONFIG_DIR / "prompt.json")
-        self.assertEqual(Path(config_manager.prompt_json_path), RUNTIME_DIR / "prompt.json")
-        self.assertEqual(Path(config_manager.config_ini_path), RUNTIME_DIR / "app.ini")
+        self.assertEqual(Path(config_manager.prompt_json_path), CONFIG_DIR / "prompt.user.json")
+        self.assertEqual(Path(config_manager.config_ini_path), CONFIG_DIR / "app.ini")
         self.assertEqual(Path(config_manager.api_ini_path), RUNTIME_DIR / "api.ini")
         self.assertEqual(Path(config_manager.history_json_path), RUNTIME_DIR / "history.json")
         self.assertEqual(Path(config_manager.memory_json_path), RUNTIME_DIR / "memory.json")
-        self.assertEqual(Path(config_manager.env_path), PROJECT_ROOT / ".env")
+        self.assertEqual(Path(config_manager.env_path), CONFIG_DIR / ".env")
 
         defaults = read_layered_ini(config_manager.default_config_ini_path, "missing-runtime.ini")
         self.assertFalse(defaults.has_option("General", "PositionX"))
