@@ -32,6 +32,12 @@ config/memory.json
 config/apps.json
 config/app_preferences.json
 data/runtime/
+/data/config/app.ini
+/data/config/prompt.user.json
+/data/config/api_groups.json
+/data/config/tools.json
+/data/app_control/preferences.json
+/data/app_control/apps.json
 
 # Logs
 logs/

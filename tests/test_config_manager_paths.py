@@ -27,6 +27,21 @@ class ConfigManagerPathTests(unittest.TestCase):
         self.assertEqual(Path(manager.tools_json_path), paths.tools_json)
         self.assertEqual(manager._tools_path(), paths.tools_json)
 
+    def test_config_manager_accepts_categorized_paths_without_writing_files(self):
+        root = PROJECT_ROOT / "__categorized_path_test__"
+        paths = ProjectPaths(root, categorized_data=True)
+        manager = object.__new__(ConfigManager)
+        manager._configure_paths(paths)
+
+        self.assertEqual(Path(manager.config_ini_path), paths.app_ini)
+        self.assertEqual(Path(manager.prompt_json_path), paths.prompt_json)
+        self.assertEqual(Path(manager.api_groups_json_path), paths.api_groups_json)
+        self.assertEqual(Path(manager.tools_json_path), paths.tools_json)
+        self.assertEqual(Path(manager.history_json_path), paths.history_json)
+        self.assertEqual(Path(manager.memory_json_path), paths.memory_json)
+        self.assertEqual(Path(manager.api_ini_path), paths.legacy_api_ini)
+        self.assertFalse(root.exists())
+
     def test_static_and_runtime_files_are_separated(self):
         self.assertEqual(Path(config_manager.default_config_ini_path), CONFIG_DIR / "app.defaults.ini")
         self.assertEqual(Path(config_manager.default_prompt_json_path), CONFIG_DIR / "prompt.json")

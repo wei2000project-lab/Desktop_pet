@@ -64,6 +64,28 @@ class ProjectPathsTests(unittest.TestCase):
         self.assertFalse(runtime.exists())
         self.assertEqual(PROJECT_PATHS.runtime_dir, RUNTIME_DIR)
 
+    def test_categorized_layout_uses_only_existing_data_categories(self):
+        root = PROJECT_ROOT / "__categorized_path_test__"
+        runtime = root / "test-user-data"
+        paths = ProjectPaths(root / "checkout", runtime, categorized_data=True)
+
+        self.assertEqual(paths.default_app_ini, root / "checkout/data/config/app.defaults.ini")
+        self.assertEqual(paths.default_prompt_json, root / "checkout/data/config/prompt.json")
+        self.assertEqual(paths.app_ini, root / "checkout/data/config/app.ini")
+        self.assertEqual(paths.prompt_json, root / "checkout/data/config/prompt.user.json")
+        self.assertEqual(paths.api_groups_json, root / "checkout/data/config/api_groups.json")
+        self.assertEqual(paths.tools_json, root / "checkout/data/config/tools.json")
+        self.assertEqual(paths.app_aliases_json, root / "checkout/data/app_control/aliases.json")
+        self.assertEqual(paths.preferences_json, root / "checkout/data/app_control/preferences.json")
+        self.assertEqual(paths.apps_json, root / "checkout/data/app_control/apps.json")
+        self.assertEqual(paths.history_json, runtime / "history.json")
+        self.assertEqual(paths.memory_json, runtime / "memory.json")
+        self.assertEqual(paths.legacy_api_ini, runtime / "api.ini")
+        self.assertEqual(paths.env_file, root / "checkout/.env")
+        self.assertEqual(paths.app_log, root / "checkout/logs/app.log")
+        self.assertFalse((root / "checkout").exists())
+        self.assertFalse(runtime.exists())
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -11,6 +11,7 @@ from pathlib import Path
 class ProjectPaths:
     project_root: Path
     runtime_root: Path | None = None
+    categorized_data: bool = False
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "project_root", Path(self.project_root))
@@ -51,7 +52,7 @@ class ProjectPaths:
 
     @property
     def app_ini(self) -> Path:
-        return self.runtime_dir / "app.ini"
+        return (self.config_dir if self.categorized_data else self.runtime_dir) / "app.ini"
 
     @property
     def legacy_api_ini(self) -> Path:
@@ -59,15 +60,15 @@ class ProjectPaths:
 
     @property
     def api_groups_json(self) -> Path:
-        return self.runtime_dir / "api_groups.json"
+        return (self.config_dir if self.categorized_data else self.runtime_dir) / "api_groups.json"
 
     @property
     def prompt_json(self) -> Path:
-        return self.runtime_dir / "prompt.json"
+        return (self.config_dir / "prompt.user.json") if self.categorized_data else (self.runtime_dir / "prompt.json")
 
     @property
     def tools_json(self) -> Path:
-        return self.runtime_dir / "tools.json"
+        return (self.config_dir if self.categorized_data else self.runtime_dir) / "tools.json"
 
     @property
     def history_json(self) -> Path:
@@ -79,11 +80,11 @@ class ProjectPaths:
 
     @property
     def preferences_json(self) -> Path:
-        return self.runtime_dir / "preferences.json"
+        return (self.app_control_dir if self.categorized_data else self.runtime_dir) / "preferences.json"
 
     @property
     def apps_json(self) -> Path:
-        return self.runtime_dir / "apps.json"
+        return (self.app_control_dir if self.categorized_data else self.runtime_dir) / "apps.json"
 
     @property
     def env_file(self) -> Path:
@@ -99,6 +100,7 @@ class ProjectPaths:
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
+# Keep the current layout active until existing data has been moved and verified.
 PROJECT_PATHS = ProjectPaths(PROJECT_ROOT)
 
 ASSETS_DIR = PROJECT_ROOT / "assets"
