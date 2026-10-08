@@ -155,6 +155,27 @@ class ConfigManager:
     def _tools_path(self) -> Path:
         return Path(self.tools_json_path)
 
+    def get_tool_settings(self) -> Dict[str, Any]:
+        return _read_json_object(self._tools_path())
+
+    def save_tool_settings_v2(self, payload: Dict[str, Any], *, replacement: str = "", clear: bool = False) -> None:
+        """Write a version-2 tool file and related .env changes as one bundle."""
+        from app.core.dotenv_file import DotEnvFile
+        from app.settings.tool_settings import prepare_tool_settings_v2
+
+        contents, updates, owned = prepare_tool_settings_v2(payload, replacement=replacement, clear=clear)
+        bundle = {self._tools_path(): contents}
+        if updates:
+            bundle[Path(self.env_path)] = DotEnvFile(self.env_path).render_updates(
+                updates, owned_existing=owned,
+            )
+        write_text_bundle_atomically(bundle)
+        for name, value in updates.items():
+            if value is None:
+                os.environ.pop(name, None)
+            else:
+                os.environ[name] = value
+
     def load_env(self):
         """Loads simple key-value pairs from .env into os.environ if it exists."""
         if os.path.exists(self.env_path):
@@ -292,6 +313,7 @@ class ConfigManager:
         prompt_values: Dict[str, Any],
         api_group_contents: str | None = None,
         preserve_legacy_api: bool = False,
+        env_contents: str | None = None,
     ) -> None:
         """Persist one complete settings edit, rolling back if any file fails."""
         general_config = copy.deepcopy(self.general_config)
@@ -328,6 +350,8 @@ class ConfigManager:
             contents[Path(self.api_ini_path)] = _serialize_ini(api_config)
         if api_group_contents is not None:
             contents[Path(self.api_groups_json_path)] = api_group_contents
+        if env_contents is not None:
+            contents[Path(self.env_path)] = env_contents
         write_text_bundle_atomically(contents)
         self.general_config = general_config
         self.api_config = api_config

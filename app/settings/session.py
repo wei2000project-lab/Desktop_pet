@@ -3,7 +3,7 @@ import os
 from dataclasses import replace
 
 from app.settings.api_group_service import APIGroupService
-from app.settings.api_groups import APIGroupSettings, migrate_legacy_api, validate_api_groups
+from app.settings.api_groups import APIGroupSettings, ENV_SCHEMA_VERSION, migrate_legacy_api, validate_api_groups
 from app.settings.editing import normalize_group_input, normalize_key_entries, validate_group_draft
 from app.settings.model import SettingsValidationError
 from app.settings.service import settings_service
@@ -65,6 +65,8 @@ class SettingsSession:
         if self.groups != self.original_groups:
             validate_api_groups(self.groups)
             saved = self.backend.save(self.snapshot, api_groups=self.groups, group_settings_mode=True)
+            if self.groups.schema_version == ENV_SCHEMA_VERSION:
+                self.groups = self.group_backend.load()
         else:
             options = {"group_settings_mode": True} if self.group_mode else {}
             saved = self.backend.save(self.snapshot, **options)

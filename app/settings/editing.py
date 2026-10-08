@@ -4,7 +4,7 @@ from dataclasses import dataclass, replace
 from urllib.parse import urlsplit
 from uuid import uuid4
 
-from app.settings.api_groups import APIGroup, APIGroupKey, APIGroupSettings
+from app.settings.api_groups import APIGroup, APIGroupKey, APIGroupSettings, ENV_SCHEMA_VERSION
 from app.settings.api_group_resolver import APIGroupResolutionError, resolve_api_request
 from app.settings.model import ApiKeyEntry, SettingsValidationError
 
@@ -31,11 +31,14 @@ def normalize_group_input(settings: APIGroupSettings) -> APIGroupSettings:
         keys = []
         for entry in group.keys:
             value = entry.key.strip() if entry.source == "stored" else ""
-            if entry.source == "stored" and not value:
+            if entry.source == "stored" and not value and not (
+                settings.schema_version == ENV_SCHEMA_VERSION and entry.environment_variable
+            ):
                 continue
             keys.append(replace(
                 entry, name=entry.name.strip() or f"Key {len(keys) + 1}", key=value,
-                environment_variable="OPENAI_API_KEY" if entry.source == "environment" else "",
+                environment_variable=(entry.environment_variable or "OPENAI_API_KEY") if entry.source == "environment"
+                else (entry.environment_variable if settings.schema_version == ENV_SCHEMA_VERSION else ""),
             ))
         groups.append(replace(group, name=group.name.strip(), base_url=group.base_url.strip(),
                               model=group.model.strip(), keys=tuple(keys)))

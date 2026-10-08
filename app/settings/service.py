@@ -1,5 +1,6 @@
 """Load, validate, and persist editable application settings."""
 import math
+import os
 from dataclasses import replace
 from typing import Callable
 from urllib.parse import urlsplit
@@ -110,14 +111,25 @@ class SettingsService:
         normalized = self.normalize(snapshot)
         self.validate(normalized, include_legacy_api=not group_settings_mode)
         group_options = {}
+        environment_updates = {}
         if group_settings_mode:
             group_options["preserve_legacy_api"] = True
         if api_groups is not None:
             from app.settings.api_group_service import APIGroupService
-            from app.settings.api_groups import serialize_api_groups
+            from app.settings.api_groups import ENV_SCHEMA_VERSION, serialize_api_groups
 
+            previous = APIGroupService(self.store, self.publish).load()
+            if api_groups.schema_version == ENV_SCHEMA_VERSION:
+                from app.core.dotenv_file import DotEnvFile
+                from app.settings.env_group_storage import prepare_env_groups
+
+                group_options["preserve_legacy_api"] = True
+                api_groups, environment_updates, owned = prepare_env_groups(api_groups, previous)
+                if environment_updates:
+                    group_options["env_contents"] = DotEnvFile(self.store.env_path).render_updates(
+                        environment_updates, owned_existing=owned,
+                    )
             group_options["api_group_contents"] = serialize_api_groups(api_groups)
-            APIGroupService(self.store, self.publish).load()
         self.store.save_settings_bundle(
             general_values={
                 "Width": normalized.width,
@@ -140,6 +152,11 @@ class SettingsService:
             },
             **group_options,
         )
+        for name, value in environment_updates.items():
+            if value is None:
+                os.environ.pop(name, None)
+            else:
+                os.environ[name] = value
         self.publish("config_updated")
         return normalized
 

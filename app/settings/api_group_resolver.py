@@ -88,7 +88,8 @@ def resolve_api_request(
         # Environment is read only for enabled references in this selected group.
         source_environment = os.environ if environment is None else environment
         for entry in sorted(enabled, key=lambda entry: entry.priority):
-            value = entry.key if entry.source == "stored" else source_environment.get(entry.environment_variable, "")
+            value = (entry.key if settings.schema_version == 1 and entry.source == "stored"
+                     else entry.key or source_environment.get(entry.environment_variable, ""))
             if not isinstance(value, str) or not value.strip():
                 continue
             candidates.append(ResolvedAPIKey(entry.id, entry.name, entry.priority, entry.source, value.strip()))

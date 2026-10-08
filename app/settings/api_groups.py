@@ -1,6 +1,8 @@
 """Versioned API group contracts; no environment or filesystem access."""
 import json
 import math
+import re
+from hashlib import sha256
 from dataclasses import asdict, dataclass, field
 from uuid import uuid4
 from urllib.parse import urlsplit
@@ -9,6 +11,13 @@ from app.settings.model import SettingsValidationError
 
 
 SCHEMA_VERSION = 1
+ENV_SCHEMA_VERSION = 2
+_ENV_NAME = re.compile(r"[A-Za-z_][A-Za-z0-9_]*\Z")
+
+
+def managed_key_name(key_id: str) -> str:
+    digest = sha256(key_id.encode("utf-8")).hexdigest()[:24].upper()
+    return f"NOVA_API_KEY_{digest}"
 
 
 class APIGroupDataError(SettingsValidationError):
@@ -56,12 +65,12 @@ def _text(value, label, allow_empty=False):
 
 def validate_api_groups(settings: APIGroupSettings) -> None:
     _require(type(settings) is APIGroupSettings, "API 群組容器格式無效。")
-    _require(type(settings.schema_version) is int and settings.schema_version == SCHEMA_VERSION,
+    _require(type(settings.schema_version) is int and settings.schema_version in (SCHEMA_VERSION, ENV_SCHEMA_VERSION),
              "不支援的 API 群組版本。")
     _require(type(settings.groups) is tuple, "API 群組列表格式無效。")
     _require(settings.active_group_id is None or type(settings.active_group_id) is str,
              "目前 API 群組引用格式無效。")
-    group_ids, key_ids = set(), set()
+    group_ids, key_ids, managed_variables = set(), set(), set()
     for group in settings.groups:
         _require(type(group) is APIGroup, "API 群組格式無效。")
         for value, label in ((group.id, "群組 ID"), (group.name, "群組名稱"),
@@ -94,10 +103,21 @@ def validate_api_groups(settings: APIGroupSettings) -> None:
             _require(type(entry.enabled) is bool, "Key 啟用狀態格式無效。")
             _text(entry.key, "Key 內容", allow_empty=True)
             _text(entry.environment_variable, "環境變數引用", allow_empty=True)
-            if entry.source == "stored":
+            if settings.schema_version == SCHEMA_VERSION and entry.source == "stored":
                 _require(bool(entry.key.strip()) and not entry.environment_variable, "儲存 Key 內容或來源無效。")
-            elif entry.source == "environment":
+            elif settings.schema_version == SCHEMA_VERSION and entry.source == "environment":
                 _require(not entry.key and entry.environment_variable == "OPENAI_API_KEY", "環境 Key 只能保存 OPENAI_API_KEY 引用。")
+            elif settings.schema_version == ENV_SCHEMA_VERSION and entry.source == "stored":
+                _require(bool(entry.key.strip()) or bool(_ENV_NAME.fullmatch(entry.environment_variable)),
+                         "儲存 Key 缺少內容或環境變數引用。")
+                _require(not entry.environment_variable or entry.environment_variable == managed_key_name(entry.id),
+                         "環境變數引用格式無效。")
+                if entry.environment_variable:
+                    _require(entry.environment_variable not in managed_variables, "儲存 Key 的環境變數引用重複。")
+                    managed_variables.add(entry.environment_variable)
+            elif settings.schema_version == ENV_SCHEMA_VERSION and entry.source == "environment":
+                _require(not entry.key and bool(_ENV_NAME.fullmatch(entry.environment_variable)),
+                         "環境變數引用格式無效。")
             else:
                 raise APIGroupDataError("Key 來源無效。")
     _require(settings.active_group_id is None or settings.active_group_id in group_ids,
@@ -106,7 +126,14 @@ def validate_api_groups(settings: APIGroupSettings) -> None:
 
 def serialize_api_groups(settings: APIGroupSettings) -> str:
     validate_api_groups(settings)
-    return json.dumps(asdict(settings), ensure_ascii=False, indent=2, allow_nan=False) + "\n"
+    payload = asdict(settings)
+    if settings.schema_version == ENV_SCHEMA_VERSION:
+        for group in payload["groups"]:
+            for key in group["keys"]:
+                _require(not key["key"] and key["environment_variable"],
+                         "尚有未存入 .env 的金鑰；設定未保存。")
+                key.pop("key")
+    return json.dumps(payload, ensure_ascii=False, indent=2, allow_nan=False) + "\n"
 
 
 def deserialize_api_groups(text: str) -> APIGroupSettings:
@@ -114,6 +141,8 @@ def deserialize_api_groups(text: str) -> APIGroupSettings:
         payload = json.loads(text, object_pairs_hook=_unique_object)
         _require(type(payload) is dict and set(payload) == {"schema_version", "active_group_id", "groups"},
                  "API 群組容器欄位無效。")
+        _require(type(payload["schema_version"]) is int and payload["schema_version"] in (SCHEMA_VERSION, ENV_SCHEMA_VERSION),
+                 "不支援的 API 群組版本。")
         _require(type(payload["groups"]) is list, "API 群組列表格式無效。")
         groups = []
         for item in payload["groups"]:
@@ -121,7 +150,10 @@ def deserialize_api_groups(text: str) -> APIGroupSettings:
             _require(type(item["keys"]) is list, "API Key 列表格式無效。")
             keys = []
             for key in item["keys"]:
-                _require(type(key) is dict and set(key) == set(APIGroupKey.__dataclass_fields__), "API Key 欄位無效。")
+                expected = set(APIGroupKey.__dataclass_fields__)
+                if payload["schema_version"] == ENV_SCHEMA_VERSION:
+                    expected.remove("key")
+                _require(type(key) is dict and set(key) == expected, "API Key 欄位無效。")
                 keys.append(APIGroupKey(**key))
             groups.append(APIGroup(**{**item, "keys": tuple(keys)}))
         settings = APIGroupSettings(tuple(groups), payload["active_group_id"], payload["schema_version"])

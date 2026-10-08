@@ -309,6 +309,8 @@ class APIGroupEditor(QWidget):
         key = QLineEdit(entry.key)
         key.setEchoMode(QLineEdit.Password)
         key.setAccessibleName("群組 API Key")
+        if self._schema_version == 2 and entry.source == "stored" and entry.environment_variable:
+            key.setPlaceholderText("已保存引用；留空表示保留原金鑰")
         show = QPushButton("顯示")
         show.setCheckable(True)
         key_widget = QWidget()
@@ -369,6 +371,7 @@ class APIGroupEditor(QWidget):
         extra_layout.addRow("", status)
         extra_body.hide()
         row = {"id": entry.id, "container": container, "name": name, "source": source,
+               "original_source": entry.source, "environment_variable": entry.environment_variable,
                "key": key, "show": show, "priority": priority, "enabled": enabled,
                "enabled_text": enabled_text, "enabled_widget": enabled_widget, "status": status,
                "more": more, "delete_action": delete_action, "layout": layout,
@@ -472,6 +475,8 @@ class APIGroupEditor(QWidget):
             for entry in row["keys"]:
                 if entry["source"].currentData() == "environment":
                     text = "環境來源已設定（不顯示或保存內容）" if feedback.environment_available else "環境來源尚無值"
+                elif self._schema_version == 2 and entry["environment_variable"] and not entry["key"].text():
+                    text = "已保存引用；留空保留，刪除 Key 可清除"
                 else:
                     text = "啟用" if entry["enabled"].isChecked() else "X：已暫停，原順位保留"
                 entry["status"].setText(text)
@@ -535,6 +540,8 @@ class APIGroupEditor(QWidget):
                 entry["id"], entry["name"].text(), entry["key"].text(),
                 entry["priority"].currentData(), entry["enabled"].isChecked(),
                 entry["source"].currentData(),
+                ("OPENAI_API_KEY" if entry["source"].currentData() == "environment" else
+                 entry["environment_variable"] if entry["original_source"] == "stored" else ""),
             ) for entry in row["keys"])
             groups.append(APIGroup(
                 row["id"], row["name"].text(), row["url"].text(), row["model"].text(),
