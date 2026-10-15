@@ -6,7 +6,7 @@ from PySide6.QtCore import QObject, Signal
 from app.settings.connection_test_controller import ConnectionTestController
 from app.settings.presenter import SettingsPresenter
 from app.settings.session import SettingsSession
-from app.settings.view_contracts import CloseChoice, CloseRequest, ConnectionInputs
+from app.contracts.settings import CloseChoice, CloseRequest, ConnectionInputs
 from tests.settings_helpers import FakePool, FakeSettingsBackend, FakeWorker
 
 

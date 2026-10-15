@@ -7,6 +7,7 @@ from PySide6.QtWidgets import (
 )
 
 from app.settings.model import ApiKeyEntry, SettingsSnapshot
+from app.contracts.settings import ConnectionInputs
 from ui.settings.widgets.number_input import DecimalInput, IntegerInput
 from ui.settings.widgets.api_group_editor import APIGroupEditor
 from ui.settings.widgets.input_controls import FocusClearingWidget, NoWheelCheckBox
@@ -111,7 +112,17 @@ class AIPage(QScrollArea):
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
-        self.group_editor._update_responsive_layout(max(0, self.viewport().width() - 64))
+        self.group_editor.set_available_width(max(0, self.viewport().width() - 64))
+
+    def connection_inputs(self) -> ConnectionInputs:
+        group_inputs = self.group_editor.connection_inputs()
+        return ConnectionInputs(
+            self.collect_connection_keys(), group_inputs.generation, group_inputs.targets,
+        )
+
+    def collect_connection_keys(self) -> dict[int, str]:
+        """Return a detached snapshot; callers never need the widget rows."""
+        return {row["id"]: row["key_input"].text() for row in self.api_key_rows}
 
     @staticmethod
     def _card(layout, title):

@@ -21,7 +21,7 @@ from app.settings.api_groups import managed_key_name
 from app.settings.connection_test_controller import ConnectionTestController
 from app.settings.session import SettingsSession
 from app.settings.tool_settings import TOOL_KEY_ENV
-from app.settings.view_contracts import ConnectionInputs
+from app.contracts.settings import ConnectionInputs
 from tests.settings_helpers import FakePool, FakeWorker
 
 

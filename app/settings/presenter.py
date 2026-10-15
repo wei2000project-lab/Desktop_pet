@@ -6,12 +6,13 @@ from app.settings.connection_test_controller import ConnectionTestController
 from app.settings.editing import group_feedback, new_api_group, new_api_key
 from app.settings.model import SettingsValidationError
 from app.settings.session import SettingsSession
-from app.settings.view_contracts import CloseChoice
+from app.contracts.settings import CloseChoice
+from app.presentation.settings.view_port import SettingsView
 from app.utils.logger import logger
 
 
 class SettingsPresenter(QObject):
-    def __init__(self, view, session=None):
+    def __init__(self, view: SettingsView, session=None):
         super().__init__(view)
         self.view = view
         self.session = SettingsSession() if session is None else session

@@ -8,7 +8,7 @@ from app.settings.api_group_resolver import APIGroupResolutionError, resolve_api
 from app.settings.connection_test import ConnectionTestWorker
 from app.settings.model import SettingsValidationError
 from app.settings.service import SettingsService
-from app.settings.view_contracts import TestTarget
+from app.contracts.settings import TestTarget
 
 
 class ConnectionTestController(QObject):

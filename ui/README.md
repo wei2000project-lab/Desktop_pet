@@ -16,7 +16,8 @@
 | `app/settings/session.py` | 設定草稿與原始快照、變更判斷、重新載入、套用、還原及遷移預覽 |
 | `app/settings/editing.py` | 金鑰與群組輸入整理、預設值、URL 驗證及環境來源狀態 |
 | `app/settings/connection_test_controller.py` | 連線測試排程、同時執行上限、過期結果與生命週期 |
-| `app/settings/view_contracts.py` | 畫面與應用層交換的純資料與操作結果 |
+| `app/contracts/settings.py` | 畫面與應用層交換的純資料與操作結果；新群組輸入／顯示契約將於第三階段接入正式流程 |
+| `app/presentation/settings/view_port.py` | Presenter 使用的公開 View 介面，不匯入具體視窗 |
 | `app/settings/service.py`、`api_group_service.py` | 設定驗證與儲存服務，委由 `app/core/config_manager.py` 讀寫檔案 |
 
 `app/core/window_manager.py` 是組裝入口：收到 `show_settings` 事件後，建立
@@ -36,3 +37,20 @@ API 群組表單與金鑰列表回傳的是原始輸入。空白列過濾、名�
 框架測試位於 `tests/test_dashboard_shell.py`；設定頁面及整合測試位於
 `tests/test_settings_*.py`。`test_settings_session.py` 與 `test_settings_workflow.py`
 不需實際視窗即可測試設定操作，`test_settings_architecture.py` 以獨立程序驗證分層。
+
+## 三層重構進度（2026-10-15）
+
+第一、第二階段已完成：建立行為基準、純資料契約與元件公開入口。
+`SettingsWindow.connection_inputs()` 透過 `AIPage.connection_inputs()` 取得資料；
+頁面向編輯器取得 `GroupTestInputs`，不跨元件讀取列字典。父頁面透過
+`set_available_width()` 提供排版寬度。
+
+`APIGroupEditor.collect_input()` 提供不含儲存版本與環境變數名稱的原始輸入。
+目前正式變更訊號仍使用舊 `collect_settings()`；上文「畫面只回傳原始輸入、
+環境讀取由應用層負責」是目標邊界，API 編輯器尚有環境金鑰讀取與保存轉換，
+第三階段才會移出。一般頁面仍接收原有 `SettingsSnapshot`。
+
+Presenter／Controller／worker 的搬移與拆分安排在第四階段。
+舊 `app/settings/view_contracts.py` 暫時保留同一組類別的相容匯出，第六階段清理。
+新增視窗應使用獨立 Presenter／Session、共享服務，並遵守公開介面；
+不向 Dashboard 加入保存規則，也不直接操作其他視窗的元件。

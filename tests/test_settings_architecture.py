@@ -19,6 +19,26 @@ class SettingsArchitectureTests(unittest.TestCase):
         )
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
+    def test_new_contracts_and_view_port_import_without_qt_or_services(self):
+        self.run_isolated('''
+            import sys
+            from app.contracts.settings import CloseChoice, ConnectionInputs, APIKeyInput
+            from app.presentation.settings.view_port import SettingsView
+            assert CloseChoice.SAVE.value == "save"
+            assert ConnectionInputs().group_targets == frozenset()
+            forbidden = ("PySide6", "ui", "app.settings", "app.core.config_manager")
+            assert not any(name == prefix or name.startswith(prefix + ".")
+                           for name in sys.modules for prefix in forbidden)
+        ''')
+
+    def test_compatibility_contracts_preserve_enum_and_class_identity(self):
+        self.run_isolated('''
+            from app.contracts import settings as canonical
+            from app.settings import view_contracts as compatibility
+            for name in compatibility.__all__:
+                assert getattr(compatibility, name) is getattr(canonical, name), name
+        ''')
+
     def test_constructing_view_does_not_load_configuration_or_application_services(self):
         self.run_isolated('''
             import sys
@@ -57,7 +77,7 @@ class SettingsArchitectureTests(unittest.TestCase):
         ''')
 
     def test_view_imports_only_application_data_contracts(self):
-        allowed = {"app.settings.model", "app.settings.api_groups", "app.settings.view_contracts"}
+        allowed = {"app.settings.model", "app.settings.api_groups", "app.contracts.settings"}
         for path in (ROOT / "ui/settings").rglob("*.py"):
             for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
                 if isinstance(node, ast.ImportFrom) and node.module and node.module.startswith("app."):

@@ -1,8 +1,8 @@
 # Dashboard 與設定功能：UI、串接、邏輯三層重構計畫
 
 建立日期：2026-10-15  
-狀態：規劃完成，尚未開始實作。  
-本次交付僅新增本文件，不修改程式、設定或使用者資料。
+狀態：第一、第二階段已完成；第三至第六階段尚未執行。
+2026-10-15 依使用者「先本地提交，一次做兩步驟」指示開始實作，結果記錄於第 11 節。
 
 ## 1. 目標與範圍
 
@@ -20,7 +20,7 @@
 - 桌寵、聊天氣泡、動畫、應用程式控制的全面重構。
 - 新增功能視窗、修改視覺設計、移除舊 API 設定相容功能。
 - 改變現有設定檔格式、資料目錄、金鑰儲存位置或正式 AI 請求策略。
-- 自動提交、合併、推送或搬動過往計畫文件。
+- 未經使用者指示提交、合併、推送或搬動過往計畫文件。本次使用者已授權先做本地提交，未授權推送。
 
 既有非本次修改，例如 `tree.txt` 與其他文件的移動，應保持原狀。
 
@@ -274,7 +274,7 @@ app/
 
 ## 9. 實作與回退原則
 
-- 本文件不代表已開始執行，待使用者後續指示再進入實作。
+- 按使用者指示每次執行兩個階段；目前已完成第一、第二階段，後續階段待下一次指示。
 - 各階段以可驗證的增量完成；階段未通過，不繼續疊加無關變動。
 - 計畫若需要變更範圍、既有操作行為或資料格式，先說明差異與原因。
 - 回退只針對本次修改，不使用會抹除使用者其他變更的整體還原方式。
@@ -293,3 +293,49 @@ app/
 - [ ] 分層、行為及整合驗證結果均有記錄。
 - [ ] 文件、匯入與測試替身同步更新，沒有雙份實作。
 - [ ] Tavily 遺留問題及非本次工作目錄變更未被處理。
+
+## 11. 第一、第二階段執行紀錄（2026-10-15）
+
+### 執行前本地提交
+
+- 提交：`25c8238`，`docs: plan settings three-layer refactor`。
+- 僅提交本計畫的初始版本，未推送。
+- 原有 `tree.txt` 修改，以及資料格式計畫由根目錄移到 `過往開發計畫/` 的變更，均未納入本次提交或改動。
+
+### 第一階段結果：已完成
+
+- 搜尋 Presenter、連線測試與舊契約的正式匯入及測試 patch 位置。
+- 原始設定測試：151 項通過；Dashboard 框架：10 項通過。
+- 環境資料格式測試：9 項通過，包含已保存金鑰顯示、空白保留、更換及刪除的既有覆蓋。
+- 新增 `tests/test_settings_baseline.py` 的 2 項行為基準，確認已保存金鑰切換來源再切回，以及外部環境來源改為儲存金鑰時的引用處理，均通過。
+- 記錄的既有行為：選中群組與目前使用群組分離；展開、遮蔽不造成 dirty；空白新列不保存；未編輯的溫度保留原值；套用失敗保留草稿；可見視窗喚回不重載；關閉／重開失效舊結果；未完成測試上限維持四個。
+- 初次測試遇到沙箱預設暫存目錄清除時的 `PermissionError`。將該次測試程序的 `TEMP`／`TMP` 指向專案內受忽略的 `.pytest_cache/refactor_tmp` 後通過；未改動系統環境設定或測試產品邏輯。
+
+### 第二階段結果：已完成
+
+- 建立 `app/contracts/settings.py`：關閉操作、連線測試目標、原始輸入與顯示資料的純資料契約，不含 schema、環境變數映射或元件。
+- 舊 `view_contracts.py` 暫時只重匯出同一組類別，不保留重複定義；正式使用點改由新路徑匯入，轉接檔於第六階段移除。
+- 建立 `app/presentation/settings/view_port.py`，描述 Presenter 使用的事件與公開方法。資料參數暫以泛型描述現有介面，待第三階段接入顯示契約；Presenter 實體仍依第四階段安排留在原路徑。
+- `APIGroupEditor` 新增 `collect_input()`、`connection_inputs()`、`set_available_width()`。原始輸入保留欄位內容，並表示是否與初始顯示值不同，不解讀保存動作。
+- `AIPage` 公開封裝金鑰列輸入及群組測試目標；`SettingsWindow` 不再直接讀取 `group_rows`／`api_key_rows`，`AIPage` 不再呼叫編輯器私有排版方法。
+- 新增元件替身測試，確認父元件只需要公開方法，不需要子元件列結構；涵蓋目標刪除／重建、輸入快照、秘密欄位 repr 與寬窄版行為。
+- 增加隔離匯入測試，確認新契約與 View 介面不載入 Qt、UI 或設定服務；確認新舊關閉選擇仍是同一個 Enum 類別。
+
+### 本次驗證與後續邊界
+
+- 設定測試 162 項、Dashboard 10 項、環境資料格式 9 項，共 181 項通過。
+- 本次未執行全專案測試或人工操作驗收；完整驗收仍屬第六階段。
+- 新群組輸入／顯示契約已建立，`collect_input()` 已可用，但正式 `groups_changed` 訊號仍走既有 `collect_settings()`。第三階段才切換正式資料流並移除 UI 中的環境讀取與保存規則。
+- `SettingsDisplay`、群組顯示與測試結果資料契約目前是後續轉換的邊界定義，尚未取代全部既有畫面載入／worker 回傳。
+- 未搬移 Presenter／Controller／worker，未修改資料格式與使用者設定，未處理 Tavily 遺留問題。
+
+重現本次測試的 PowerShell 指令：
+
+```powershell
+New-Item -ItemType Directory -Force -Path '.pytest_cache/refactor_tmp' | Out-Null
+$env:TEMP = Join-Path (Get-Location) '.pytest_cache/refactor_tmp'
+$env:TMP = $env:TEMP
+python -B -m unittest discover -s tests -p 'test_settings_*.py'
+python -B -m unittest discover -s tests -p test_dashboard_shell.py
+python -B -m unittest discover -s tests -p test_env_data_format.py
+```

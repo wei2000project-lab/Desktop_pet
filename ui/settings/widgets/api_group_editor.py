@@ -8,6 +8,7 @@ from PySide6.QtWidgets import (
 )
 
 from app.settings.api_groups import APIGroup, APIGroupKey, APIGroupSettings
+from app.contracts.settings import APIKeyInput, APIGroupInput, APIGroupsInput, GroupTestInputs
 from ui.settings.widgets.number_input import DecimalInput
 from ui.settings.widgets.input_controls import NoWheelCheckBox, NoWheelComboBox, ToggleSwitch
 
@@ -378,7 +379,7 @@ class APIGroupEditor(QWidget):
         extra_body.hide()
         row = {"id": entry.id, "container": container, "name": name, "source": source,
                "original_source": entry.source, "environment_variable": entry.environment_variable,
-               "key": key, "displayed_saved_key": saved_key, "show": show,
+               "key": key, "displayed_saved_key": saved_key, "initial_key_text": key.text(), "show": show,
                "priority": priority, "enabled": enabled,
                "enabled_text": enabled_text, "enabled_widget": enabled_widget, "status": status,
                "more": more, "delete_action": delete_action, "layout": layout,
@@ -498,6 +499,10 @@ class APIGroupEditor(QWidget):
         super().resizeEvent(event)
         self._update_responsive_layout(event.size().width())
 
+    def set_available_width(self, width: int) -> None:
+        """Let a containing viewport supply its usable content width."""
+        self._update_responsive_layout(max(0, width))
+
     def _update_responsive_layout(self, width=None):
         narrow = (self.width() if width is None else width) < self.RESPONSIVE_WIDTH
         if narrow == self._narrow and width is not None:
@@ -541,8 +546,32 @@ class APIGroupEditor(QWidget):
             layout.setColumnStretch(1, 2)
             layout.setColumnStretch(2, 1)
 
+    def connection_inputs(self) -> GroupTestInputs:
+        targets = {(group["id"], "") for group in self.group_rows}
+        targets.update((group["id"], key["id"])
+                       for group in self.group_rows for key in group["keys"])
+        return GroupTestInputs(self.generation, frozenset(targets))
+
+    def collect_input(self) -> APIGroupsInput:
+        """Raw input port; phase three will switch the live change signal to it."""
+        groups = []
+        for row in self.group_rows:
+            keys = tuple(APIKeyInput(
+                entry["id"], entry["name"].text(), entry["key"].text(),
+                entry["priority"].currentData(), entry["enabled"].isChecked(),
+                entry["source"].currentData(),
+                entry["key"].text() != entry["initial_key_text"],
+            ) for entry in row["keys"])
+            groups.append(APIGroupInput(
+                row["id"], row["name"].text(), row["url"].text(), row["model"].text(),
+                row["temperature"].value(), row["ssl"].isChecked(),
+                row["mode"].currentData(), keys,
+                row["temperature"].value() != row["display_temperature"],
+            ))
+        return APIGroupsInput(tuple(groups), self._active_id)
+
     def collect_settings(self):
-        """Return raw form values; application code normalizes and validates them."""
+        """Legacy conversion; replaced by application-side editing in phase three."""
         groups = []
         for row in self.group_rows:
             keys = tuple(APIGroupKey(

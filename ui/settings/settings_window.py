@@ -5,7 +5,7 @@ from PySide6.QtWidgets import (
     QHBoxLayout, QLabel, QPushButton, QWidget,
 )
 
-from app.settings.view_contracts import CloseChoice, CloseRequest, ConnectionInputs
+from app.contracts.settings import CloseChoice, CloseRequest, ConnectionInputs
 from ui.dashboard import DashboardWindow
 from ui.dashboard.page_registry import PageDefinition
 from ui.settings.page_registry import default_page_definitions
@@ -142,14 +142,7 @@ class SettingsWindow(DashboardWindow):
     def connection_inputs(self):
         if self.ai_page is None:
             return ConnectionInputs()
-        page = self.ai_page
-        editor = page.group_editor
-        targets = {(group["id"], "") for group in editor.group_rows}
-        targets.update((group["id"], key["id"]) for group in editor.group_rows for key in group["keys"])
-        return ConnectionInputs(
-            {row["id"]: row["key_input"].text() for row in page.api_key_rows},
-            editor.generation, frozenset(targets),
-        )
+        return self.ai_page.connection_inputs()
 
     def show_test_started(self, target):
         if self.ai_page is None:
