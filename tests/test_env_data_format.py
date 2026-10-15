@@ -18,8 +18,11 @@ from app.settings.api_groups import (
     ENV_SCHEMA_VERSION, deserialize_api_groups, serialize_api_groups,
 )
 from app.settings.api_groups import managed_key_name
+from app.settings.connection_test_controller import ConnectionTestController
 from app.settings.session import SettingsSession
 from app.settings.tool_settings import TOOL_KEY_ENV
+from app.settings.view_contracts import ConnectionInputs
+from tests.settings_helpers import FakePool, FakeWorker
 
 
 class EnvDataFormatTests(unittest.TestCase):
@@ -50,6 +53,26 @@ class EnvDataFormatTests(unittest.TestCase):
 
     def save(self, groups):
         return self.service.save(SettingsSnapshot(), api_groups=groups, group_settings_mode=True)
+
+    def test_saved_env_key_can_start_settings_connection_test(self):
+        self.save(self.draft(APIGroupKey("first", "主用", "fake-first-key")))
+        session = SettingsSession(self.service, self.group_service)
+        pool = FakePool()
+        controller = ConnectionTestController(
+            session,
+            lambda: ConnectionInputs(group_targets=frozenset({("group", "first")})),
+            pool=pool,
+            worker_factory=FakeWorker,
+        )
+        results = []
+        controller.finished.connect(lambda _target, message: results.append(message))
+
+        controller.start_group("group", "first")
+
+        self.assertEqual(len(pool.workers), 1)
+        self.assertEqual(pool.workers[0].inputs[1], "fake-first-key")
+        pool.workers[0].finish()
+        self.assertEqual(results, ["連線測試成功。"])
 
     def test_multiple_keys_round_trip_without_plaintext_in_json_or_ini(self):
         self.paths.env_file.write_text("# user comment\nUNRELATED=keep\n", encoding="utf-8")

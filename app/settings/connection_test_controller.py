@@ -67,7 +67,7 @@ class ConnectionTestController(QObject):
             raise ValueError("請指定要測試的 Key。")
         else:
             group = replace(group, keys=())
-        return resolve_api_request(APIGroupSettings((group,), group.id))
+        return resolve_api_request(APIGroupSettings((group,), group.id, self.session.groups.schema_version))
 
     @Slot(str, str)
     def start_group(self, group_id, key_id):
