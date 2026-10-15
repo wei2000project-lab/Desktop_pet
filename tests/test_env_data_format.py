@@ -161,25 +161,48 @@ class EnvDataFormatTests(unittest.TestCase):
         self.assertEqual(self.paths.env_file.read_bytes(), before)
         self.assertEqual(self.env.read_values()[name], "fake-first-key")
 
-    def test_editor_keeps_saved_reference_with_empty_input_and_explicit_delete(self):
+    def test_editor_shows_saved_key_masked_without_resaving_it(self):
         os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-        from PySide6.QtWidgets import QApplication
+        from PySide6.QtWidgets import QApplication, QLineEdit
         from ui.settings.widgets.api_group_editor import APIGroupEditor
+        from ui.settings.styles import SETTINGS_STYLES
 
         app = QApplication.instance() or QApplication([])
         editor = APIGroupEditor()
         try:
+            editor.setStyleSheet(SETTINGS_STYLES)
             saved = self.draft(APIGroupKey(
                 "first", "主用", "", environment_variable=managed_key_name("first"),
             ))
-            editor.load_settings(saved)
+            with patch.dict(os.environ, {managed_key_name("first"): "fake-saved-key"}):
+                editor.load_settings(saved)
+            editor.resize(480, 600)
+            editor.show()
+            app.processEvents()
             row = editor.group_rows[0]["keys"][0]
-            self.assertEqual(row["key"].text(), "")
-            self.assertIn("留空", row["key"].placeholderText())
+            self.assertEqual(row["key"].text(), "fake-saved-key")
+            self.assertEqual(row["key"].echoMode(), QLineEdit.Password)
+            self.assertFalse(row["show"].isCheckable())
+            button_width = row["show"].width()
+            button_height = row["show"].height()
+            row["show"].click()
+            app.processEvents()
+            self.assertEqual(row["key"].echoMode(), QLineEdit.Normal)
+            self.assertEqual(row["key"].text(), "fake-saved-key")
+            self.assertEqual(row["show"].width(), button_width)
+            self.assertEqual(row["show"].height(), button_height)
+            self.assertLessEqual(row["show"].sizeHint().width(), button_width)
+            row["show"].click()
+            app.processEvents()
+            self.assertEqual(row["key"].echoMode(), QLineEdit.Password)
+            self.assertEqual(row["show"].width(), button_width)
+            self.assertEqual(row["show"].height(), button_height)
             self.assertEqual(editor.collect_settings(), saved)
 
             row["key"].setText("fake-replacement")
             self.assertEqual(editor.collect_settings().groups[0].keys[0].key, "fake-replacement")
+            row["key"].clear()
+            self.assertEqual(editor.collect_settings(), saved)
             editor.remove_key("group", "first")
             self.assertEqual(editor.collect_settings().groups[0].keys, ())
         finally:

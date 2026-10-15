@@ -1,4 +1,6 @@
 """API group form: widget state and raw input events only."""
+import os
+
 from PySide6.QtCore import Signal, Qt
 from PySide6.QtWidgets import (
     QBoxLayout, QFormLayout, QGridLayout, QHBoxLayout, QLabel, QLineEdit, QMenu,
@@ -306,13 +308,17 @@ class APIGroupEditor(QWidget):
         source.setCurrentIndex(source.findData(entry.source))
         source_badge = QLabel("環境變數")
         source_badge.setObjectName("settingsStatusBadge")
-        key = QLineEdit(entry.key)
+        saved_key = (os.environ.get(entry.environment_variable, "")
+                     if self._schema_version == 2 and entry.source == "stored"
+                     and entry.environment_variable and not entry.key else "")
+        key = QLineEdit(entry.key or saved_key)
         key.setEchoMode(QLineEdit.Password)
         key.setAccessibleName("群組 API Key")
         if self._schema_version == 2 and entry.source == "stored" and entry.environment_variable:
             key.setPlaceholderText("已保存引用；留空表示保留原金鑰")
         show = QPushButton("顯示")
-        show.setCheckable(True)
+        show.setMinimumWidth(max(show.sizeHint().width(),
+                                 show.fontMetrics().horizontalAdvance("隱藏") + 32))
         key_widget = QWidget()
         key_fields = QHBoxLayout(key_widget)
         key_fields.setContentsMargins(0, 0, 0, 0)
@@ -372,7 +378,8 @@ class APIGroupEditor(QWidget):
         extra_body.hide()
         row = {"id": entry.id, "container": container, "name": name, "source": source,
                "original_source": entry.source, "environment_variable": entry.environment_variable,
-               "key": key, "show": show, "priority": priority, "enabled": enabled,
+               "key": key, "displayed_saved_key": saved_key, "show": show,
+               "priority": priority, "enabled": enabled,
                "enabled_text": enabled_text, "enabled_widget": enabled_widget, "status": status,
                "more": more, "delete_action": delete_action, "layout": layout,
                "key_widget": key_widget, "priority_widget": priority_widget,
@@ -390,16 +397,18 @@ class APIGroupEditor(QWidget):
             key.setEnabled(is_stored)
             show.setEnabled(is_stored)
             if not is_stored:
-                show.setChecked(False)
+                key.setEchoMode(QLineEdit.Password)
+                show.setText("顯示")
             source_badge.setVisible(not is_stored)
             enabled_text.setText("啟用中" if enabled.isChecked() else "已停用")
             self._changed()
 
-        def reveal(checked):
-            key.setEchoMode(QLineEdit.Normal if checked else QLineEdit.Password)
-            show.setText("隱藏" if checked else "顯示")
+        def reveal():
+            visible = key.echoMode() == QLineEdit.Password
+            key.setEchoMode(QLineEdit.Normal if visible else QLineEdit.Password)
+            show.setText("隱藏" if visible else "顯示")
 
-        show.toggled.connect(reveal)
+        show.clicked.connect(reveal)
         more_settings_action.toggled.connect(
             lambda checked: self._set_key_details_visible(row, checked)
         )
@@ -537,7 +546,10 @@ class APIGroupEditor(QWidget):
         groups = []
         for row in self.group_rows:
             keys = tuple(APIGroupKey(
-                entry["id"], entry["name"].text(), entry["key"].text(),
+                entry["id"], entry["name"].text(),
+                ("" if self._schema_version == 2 and entry["original_source"] == "stored"
+                 and entry["key"].text() == entry["displayed_saved_key"]
+                 else entry["key"].text()),
                 entry["priority"].currentData(), entry["enabled"].isChecked(),
                 entry["source"].currentData(),
                 ("OPENAI_API_KEY" if entry["source"].currentData() == "environment" else

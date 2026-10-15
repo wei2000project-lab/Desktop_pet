@@ -1,6 +1,63 @@
 """Styles for settings pages, editors, and the save/cancel action bar."""
 
 SETTINGS_STYLES = """
+QPushButton, QPushButton:focus {
+    background-color: #ffffff;
+    color: #514b59;
+    border: 1px solid #cfcad4;
+    border-radius: 6px;
+    min-height: 32px;
+    padding: 0 10px;
+}
+QPushButton:hover {
+    background-color: #ece8f2;
+    border-color: #7b4ba0;
+}
+QPushButton:pressed {
+    background-color: #e1d8e9;
+    border-color: #7b4ba0;
+}
+QPushButton:disabled {
+    background-color: #f4f2f6;
+    color: #aaa4b0;
+    border-color: #dedbe3;
+}
+QPushButton#dashboardSidebarToggle:focus {
+    background-color: transparent;
+    border-color: #cbc7d0;
+    color: #514b59;
+}
+QPushButton#dashboardSidebarToggle:hover {
+    background-color: #ece8f2;
+    border-color: #7b4ba0;
+    color: #5f2d82;
+}
+QPushButton#dashboardSidebarToggle:pressed {
+    background-color: #e1d8e9;
+    border-color: #7b4ba0;
+}
+#dashboardSidebar QPushButton[checkable="true"]:focus {
+    background-color: transparent;
+    border-color: transparent;
+}
+#dashboardSidebar QPushButton[checkable="true"]:hover {
+    background-color: #ece8f2;
+    border-color: #d4c7df;
+}
+#dashboardSidebar QPushButton[checkable="true"]:pressed {
+    background-color: #e1d8e9;
+    border-color: #7b4ba0;
+}
+#dashboardSidebar QPushButton[checkable="true"]:checked {
+    background-color: #eadcf5;
+    border-color: transparent;
+}
+#dashboardSidebar QPushButton[checkable="true"]:checked:hover {
+    background-color: #d9c7eb;
+}
+#dashboardSidebar QPushButton[checkable="true"]:checked:pressed {
+    background-color: #cdb0e1;
+}
 #settingsPageContent, QScrollArea[settingsPage="true"] {
     background-color: #f4f3f6;
     color: #24212a;
@@ -39,16 +96,25 @@ QPushButton#settingsApiGroupButton {
     padding: 8px 10px;
     text-align: left;
 }
-QPushButton#settingsApiGroupButton:hover,
-QPushButton#settingsApiGroupButton:focus {
+QPushButton#settingsApiGroupButton:hover {
     background-color: #efebf3;
     border-color: #d8cfdf;
 }
 QPushButton#settingsApiGroupButton:checked {
     background-color: #eadcf5;
-    border-color: #9b69bd;
+    border-color: transparent;
     color: #51276d;
     font-weight: 600;
+}
+QPushButton#settingsApiGroupButton:pressed {
+    background-color: #e1d8e9;
+    border-color: #7b4ba0;
+}
+QPushButton#settingsApiGroupButton:checked:hover {
+    background-color: #d9c7eb;
+}
+QPushButton#settingsApiGroupButton:checked:pressed {
+    background-color: #cdb0e1;
 }
 #settingsApiKeyRow {
     background-color: #ffffff;
@@ -129,22 +195,8 @@ QLabel[validationError="true"] {
 #settingsCard QComboBox:focus {
     border: 2px solid #7b4ba0;
 }
-#settingsCard QPushButton:focus {
-    border: 2px solid #7b4ba0;
-}
 QPushButton#settingsApiGroupEditButton {
-    background-color: #ffffff;
-    color: #514b59;
-    border: 2px solid #cfcad4;
-    border-radius: 6px;
     min-width: 52px;
-    min-height: 28px;
-    padding: 0 12px;
-}
-QPushButton#settingsApiGroupEditButton:hover,
-QPushButton#settingsApiGroupEditButton:checked {
-    background-color: #ece8f2;
-    border-color: #7b4ba0;
 }
 QPushButton#settingsNumberStepButton {
     background-color: #ffffff;
@@ -169,6 +221,10 @@ QPushButton#settingsNumberStepButton:hover {
     background-color: #ece8f2;
     border-color: #7b4ba0;
 }
+QPushButton#settingsNumberStepButton:pressed {
+    background-color: #e1d8e9;
+    border-color: #7b4ba0;
+}
 QPushButton#settingsNumberStepButton:disabled {
     color: #aaa4b0;
     background-color: #f4f2f6;
@@ -186,22 +242,25 @@ QPushButton#settingsNumberStepButton:disabled {
     border-radius: 7px;
     padding: 0 12px;
 }
-#settingsCancelButton {
-    background-color: #ffffff;
-    border: 1px solid #cfcad4;
-    color: #49424e;
-}
-#settingsApplyButton {
+#settingsApplyButton, #settingsApplyButton:focus {
     background-color: #704294;
     border: 1px solid #704294;
     color: #ffffff;
+}
+#settingsApplyButton:hover {
+    background-color: #613586;
+    border-color: #613586;
+}
+#settingsApplyButton:pressed {
+    background-color: #4f246d;
+    border-color: #4f246d;
 }
 #settingsApplyButton:disabled {
     background-color: #d7d2db;
     border-color: #d7d2db;
     color: #8e8793;
 }
-#settingsDangerButton {
+#settingsDangerButton, #settingsDangerButton:focus {
     background-color: #ffffff;
     border: 1px solid #b3261e;
     border-radius: 7px;
@@ -209,8 +268,7 @@ QPushButton#settingsNumberStepButton:disabled {
     min-height: 34px;
     padding: 0 12px;
 }
-#settingsDangerButton:hover,
-#settingsDangerButton:focus {
+#settingsDangerButton:hover {
     background-color: #fbe9e7;
 }
 #settingsDangerButton:pressed {

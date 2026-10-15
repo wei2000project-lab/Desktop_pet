@@ -67,6 +67,34 @@ class SettingsAPIGroupTests(unittest.TestCase):
         self.assertEqual(group.keys[0].key, "fake-stored-key")
         self.assertEqual(self.events, [])
 
+    def test_edit_button_keeps_same_feedback_in_both_modes(self):
+        self.window.select_page("ai")
+        self.window.show()
+        self.app.processEvents()
+        button = self.editor.group_rows[0]["advanced_button"]
+
+        def background():
+            self.app.processEvents()
+            return button.grab().toImage().pixelColor(8, button.height() // 2).name()
+
+        states = []
+        for checked in (False, True):
+            button.setChecked(checked)
+            QTest.mouseMove(self.window, QPoint(self.window.width() - 2, self.window.height() - 2))
+            normal = background()
+            QTest.mouseMove(button, QPoint(8, button.height() // 2))
+            hover = background()
+            QTest.mousePress(button, Qt.LeftButton, pos=QPoint(8, button.height() // 2))
+            pressed = background()
+            QTest.mouseRelease(button, Qt.LeftButton, pos=QPoint(-8, -8))
+            QTest.mouseMove(self.window, QPoint(self.window.width() - 2, self.window.height() - 2))
+            self.assertEqual(background(), normal)
+            states.append((normal, hover, pressed))
+
+        self.assertEqual(states[0], states[1])
+        self.assertEqual(len(set(states[0])), 3)
+        self.assertEqual(button.text(), "完成")
+
     def start_test(self, key=True):
         controller = self.presenter.connection_tests
         controller.pool = FakePool()

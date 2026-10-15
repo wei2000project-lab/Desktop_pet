@@ -158,9 +158,13 @@ class SettingsDialog(QDialog):
                 font-size: 20px;
                 padding: 0;
             }
-            #settingsDialogClose:hover, #settingsDialogClose:focus {
+            #settingsDialogClose:hover {
                 background-color: #f0ecf3;
                 border-color: #d8cfdf;
+            }
+            #settingsDialogClose:pressed {
+                background-color: #e1d8e9;
+                border-color: #c7b9d1;
             }
             #settingsDialogPrimary, #settingsDialogDanger,
             #settingsDialogSecondary {
@@ -173,26 +177,38 @@ class SettingsDialog(QDialog):
                 border: 1px solid #6d3c92;
                 color: #ffffff;
             }
-            #settingsDialogPrimary:hover, #settingsDialogPrimary:focus {
+            #settingsDialogPrimary:hover {
                 background-color: #6d3c92;
-                border: 2px solid #4f246d;
+                border-color: #4f246d;
+            }
+            #settingsDialogPrimary:pressed {
+                background-color: #4f246d;
+                border-color: #4f246d;
             }
             #settingsDialogSecondary {
                 background-color: #ffffff;
                 border: 1px solid #cfc8d4;
                 color: #514b59;
             }
-            #settingsDialogSecondary:hover, #settingsDialogSecondary:focus {
+            #settingsDialogSecondary:hover {
                 background-color: #f2eef5;
-                border: 2px solid #7b4ba0;
+                border-color: #7b4ba0;
+            }
+            #settingsDialogSecondary:pressed {
+                background-color: #e1d8e9;
+                border-color: #7b4ba0;
             }
             #settingsDialogDanger {
                 background-color: #b3261e;
                 border: 1px solid #961b15;
                 color: #ffffff;
             }
-            #settingsDialogDanger:hover, #settingsDialogDanger:focus {
+            #settingsDialogDanger:hover {
                 background-color: #961b15;
-                border: 2px solid #74110d;
+                border-color: #74110d;
+            }
+            #settingsDialogDanger:pressed {
+                background-color: #74110d;
+                border-color: #74110d;
             }
         """

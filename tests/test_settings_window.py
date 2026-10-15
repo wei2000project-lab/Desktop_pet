@@ -6,7 +6,7 @@ from unittest.mock import patch
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from PySide6.QtGui import QCloseEvent
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QPoint, Qt
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QAbstractSpinBox
 from PySide6.QtWidgets import QApplication, QMessageBox, QScrollArea
@@ -33,6 +33,44 @@ class SettingsWindowTests(unittest.TestCase):
         self.window.close()
         self.window.deleteLater()
         self.app.processEvents()
+
+    def test_button_feedback_returns_to_normal_after_focus(self):
+        self.window.show()
+        self.app.processEvents()
+        button = self.window.cancel_button
+
+        def background():
+            self.app.processEvents()
+            return button.grab().toImage().pixelColor(8, button.height() // 2).name()
+
+        normal = background()
+        QTest.mouseMove(button, QPoint(8, button.height() // 2))
+        hover = background()
+        QTest.mousePress(button, Qt.LeftButton, pos=QPoint(8, button.height() // 2))
+        pressed = background()
+        QTest.mouseRelease(button, Qt.LeftButton, pos=QPoint(-8, -8))
+        QTest.mouseMove(self.window, QPoint(self.window.width() - 2, self.window.height() - 2))
+
+        self.assertNotEqual(hover, normal)
+        self.assertNotEqual(pressed, hover)
+        self.assertTrue(button.hasFocus())
+        self.assertEqual(background(), normal)
+
+        selected = self.window.sidebar.button_for_key("general")
+        self.assertTrue(selected.isChecked())
+        selected_background = selected.grab().toImage().pixelColor(8, selected.height() // 2).name()
+        QTest.mouseMove(selected, QPoint(8, selected.height() // 2))
+        self.app.processEvents()
+        self.assertNotEqual(
+            selected.grab().toImage().pixelColor(8, selected.height() // 2).name(),
+            selected_background,
+        )
+        QTest.mouseMove(self.window, QPoint(self.window.width() - 2, self.window.height() - 2))
+        self.app.processEvents()
+        self.assertEqual(
+            selected.grab().toImage().pixelColor(8, selected.height() // 2).name(),
+            selected_background,
+        )
 
     def test_default_registry_has_unique_ordered_pages(self):
         pages = default_page_definitions()
