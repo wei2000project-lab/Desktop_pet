@@ -146,5 +146,97 @@ class SettingsConnectionControllerTests(unittest.TestCase):
         self.assertIn("多個測試", self.results[-1][1])
 
 
+class SettingsMultipleViewsTests(unittest.TestCase):
+    def setUp(self):
+        self.backend = FakeSettingsBackend()
+        self.left_session = SettingsSession(self.backend)
+        self.right_session = SettingsSession(self.backend)
+        self.left, self.right = FakeView(), FakeView()
+        self.left_presenter = SettingsPresenter(self.left, self.left_session)
+        self.right_presenter = SettingsPresenter(self.right, self.right_session)
+        for view, presenter in ((self.left, self.left_presenter), (self.right, self.right_presenter)):
+            view.connection_inputs.return_value = ConnectionInputs({1: "fake-key"})
+            presenter.connection_tests.pool = FakePool()
+            presenter.connection_tests.worker_factory = FakeWorker
+
+    def tearDown(self):
+        self.left.deleteLater()
+        self.right.deleteLater()
+
+    def test_shared_backend_does_not_share_drafts_or_cancel_state(self):
+        self.left.settings_changed.emit({"width": 400})
+        self.right.settings_changed.emit({"width": 600})
+        self.left.apply_requested.emit()
+        self.assertEqual(self.backend.snapshot.width, 400)
+        self.assertFalse(self.left_session.is_dirty)
+        self.assertEqual(self.right_session.snapshot.width, 600)
+        self.assertTrue(self.right_session.is_dirty)
+        self.right.cancel_requested.emit()
+        self.assertEqual(self.right_session.snapshot.width, 250)
+        self.assertEqual(self.left_session.snapshot.width, 400)
+        self.assertEqual(len(self.backend.saved), 1)
+        self.left.close_without_prompt.assert_not_called()
+        self.right.close_without_prompt.assert_called_once()
+        self.right_presenter.reload()
+        self.assertEqual(self.right_session.snapshot.width, 400)
+
+    def test_same_request_ids_return_only_to_originating_view_after_other_view_closes(self):
+        self.left.legacy_test_requested.emit(1)
+        self.right.legacy_test_requested.emit(1)
+        left_worker = self.left_presenter.connection_tests.pool.workers[0]
+        right_worker = self.right_presenter.connection_tests.pool.workers[0]
+        self.assertEqual(left_worker.request_id, right_worker.request_id)
+        self.left.closed.emit()
+        self.left_presenter.reload()
+        left_worker.finish(message="old left result")
+        self.left.show_test_finished.assert_not_called()
+        self.right.show_test_finished.assert_not_called()
+        right_worker.finish(message="right result")
+        self.assertEqual(self.right.show_test_finished.call_args.args[1], "right result")
+        self.left.show_test_finished.assert_not_called()
+        self.left.legacy_test_requested.emit(1)
+        self.left_presenter.connection_tests.pool.workers[1].finish(message="new left result")
+        self.assertEqual(self.left.show_test_finished.call_args.args[1], "new left result")
+        self.right.show_test_finished.assert_called_once()
+
+    def test_group_load_baselines_and_new_rows_are_session_local(self):
+        from dataclasses import replace
+        from types import SimpleNamespace
+        from app.contracts.settings import APIGroupInput, APIKeyInput, APIGroupsInput
+        from app.settings.api_groups import APIGroup, APIGroupKey, APIGroupSettings
+        groups = APIGroupSettings((APIGroup(
+            "g", "Group", "https://example.test/v1", "model",
+            keys=(APIGroupKey("k", "Key", environment_variable="FAKE_SAVED"),),
+        ),), "g", 2)
+        backend = SimpleNamespace(load=lambda: groups)
+        left = SettingsSession(self.backend, backend)
+        right = SettingsSession(self.backend, backend)
+        left.display_groups()
+        right.display_groups()
+        raw_key = APIKeyInput("k", "Key", "fake-display", 1, True, "stored", False)
+        form = APIGroupsInput((APIGroupInput(
+            "g", "Group", "https://example.test/v1", "model", 0.7,
+            True, "api_key", (raw_key,), False,
+        ),), "g")
+        left.update_group_input(replace(form, groups=(replace(form.groups[0],
+            keys=(replace(raw_key, source="environment"),)),)))
+        new_key = right.new_key_display("g")
+        right.update_group_input(form)
+        self.assertEqual(left.groups.groups[0].keys[0].source, "environment")
+        self.assertEqual(right.groups, groups)
+        left.update_group_input(form)
+        self.assertEqual(left.groups, groups)
+        added_key = APIKeyInput(new_key.id, "New Key", "fake-new-key", new_key.priority,
+                                new_key.enabled, new_key.source, True)
+        right.update_group_input(replace(form, groups=(replace(form.groups[0],
+            keys=(raw_key, added_key)),)))
+        self.assertEqual(tuple(key.id for key in right.groups.groups[0].keys), ("k", new_key.id))
+        self.assertEqual(right.groups.groups[0].keys[1].key, "fake-new-key")
+        self.assertEqual(left.groups, groups)
+        right.discard()
+        self.assertEqual(right.groups, groups)
+        self.assertEqual(left.groups, groups)
+
+
 if __name__ == "__main__":
     unittest.main()

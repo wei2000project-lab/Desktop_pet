@@ -31,14 +31,6 @@ class SettingsArchitectureTests(unittest.TestCase):
                            for name in sys.modules for prefix in forbidden)
         ''')
 
-    def test_compatibility_contracts_preserve_enum_and_class_identity(self):
-        self.run_isolated('''
-            from app.contracts import settings as canonical
-            from app.settings import view_contracts as compatibility
-            for name in compatibility.__all__:
-                assert getattr(compatibility, name) is getattr(canonical, name), name
-        ''')
-
     def test_constructing_view_does_not_load_configuration_or_application_services(self):
         self.run_isolated('''
             import sys

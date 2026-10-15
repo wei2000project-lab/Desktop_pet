@@ -42,13 +42,6 @@ class TestTarget:
 
 
 @dataclass(frozen=True)
-class ConnectionTestResult:
-    target: TestTarget
-    success: bool
-    message: str  # Application-sanitized message; never raw server output.
-
-
-@dataclass(frozen=True)
 class LegacyKeyInput:
     name: str
     key: str = field(repr=False)

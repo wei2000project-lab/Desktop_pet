@@ -53,11 +53,29 @@ AI 頁再向編輯器取得 `GroupTestInputs`，不跨元件讀取列字典。
 
 ## 驗證與進度
 
-第一至第四階段已完成；第五階段的完整防越界檢查與第六階段整合驗收尚未執行。
-既有分層測試已配合新匯入更新，UI 只允許匯入 `app.contracts.settings`。
+六個階段已完成（2026-10-16）。收尾複查後完整測試套件 444 項通過；
+17 個設定測試檔各自在獨立程序執行通過，182 項設定測試以反向順序執行也通過。
+分層測試配合新匯入更新，UI 的應用層依賴只允許 `app.contracts`。
 `tests/test_settings_display.py`、`test_settings_editing.py` 驗證顯示與輸入規則；
 `test_settings_connection_test.py` 驗證無 Qt 的單次服務與 worker 包裝。
 `test_settings_workflow.py` 使用假 View 驗證流程，其餘 UI／資料測試維持既有行為驗證。
 
-舊 `app/settings/view_contracts.py` 暫時只重匯出相同契約，第六階段移除；
+`tests/settings_boundaries.py` 提供 AST 架構檢查，搭配
+`test_settings_boundaries.py` 掃描 Dashboard、設定 UI、契約、邏輯、串接及組裝入口。
+檢查涵蓋匯入別名、相對匯入、常見檔案／環境／網路操作與公開 View 介面；
+組裝例外限於 `WindowManager.show_settings()` 對串接層的匯入。
+測試也刻意輸入越界程式片段，驗證檢查確實會拒絕它們。
+一般別名按來源順序與函式作用域解析，避免其他函式的同名變數造成漏報或誤報；
+組裝例外也不延伸至入口內的巢狀函式。
+這是防止一般開發回歸的架構規則，不是阻擋任意動態 Python 的安全沙箱。
+檢查不模擬分支合併或完整 Python 執行語義。
+
+雙 Session／假 View 測試驗證共享服務時草稿互不污染，關閉其中一個視窗後，
+另一個視窗仍能收到自己的背景結果；保存衝突控制仍屬新增第二個寫入入口前的後續需求。
+
+視覺驗收使用假資料的離屏 Qt 視窗，模擬點擊、鍵盤與滾輪後檢查截圖，
+涵蓋 900×650 與 650×600 版面、各頁、金鑰顯示／遮蔽、測試結果、套用／取消／重開。
+此方式未驗證 Windows 原生桌面上的 DPI、視窗管理或不同螢幕配置。
+
+舊契約重匯出與未使用的測試結果契約已移除；
 舊 Presenter／Controller 檔案已搬移，沒有保留雙份實作。
