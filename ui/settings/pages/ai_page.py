@@ -6,7 +6,7 @@ from PySide6.QtWidgets import (
     QScrollArea, QVBoxLayout, QWidget, QPushButton, QHBoxLayout,
 )
 
-from app.settings.model import ApiKeyEntry, SettingsSnapshot
+from app.contracts.settings import LegacyKeyInput, SettingsDisplay
 from app.contracts.settings import ConnectionInputs
 from ui.settings.widgets.number_input import DecimalInput, IntegerInput
 from ui.settings.widgets.api_group_editor import APIGroupEditor
@@ -165,7 +165,7 @@ class AIPage(QScrollArea):
                         self.history_limit_input):
             control.interpretText()
 
-    def load_snapshot(self, snapshot: SettingsSnapshot) -> None:
+    def load_snapshot(self, snapshot: SettingsDisplay) -> None:
         self._loading = True
         try:
             for row in list(self.api_key_rows):
@@ -242,7 +242,7 @@ class AIPage(QScrollArea):
             self._emit_settings(None)
 
     def collect_api_key_entries(self):
-        return tuple(ApiKeyEntry(row["name_input"].text(), row["key_input"].text())
+        return tuple(LegacyKeyInput(row["name_input"].text(), row["key_input"].text())
                      for row in self.api_key_rows)
 
     def begin_test(self, row_id):

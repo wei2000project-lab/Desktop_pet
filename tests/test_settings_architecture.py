@@ -54,8 +54,8 @@ class SettingsArchitectureTests(unittest.TestCase):
             view.close()
             assert changes == [{"always_on_top": True}], changes
             forbidden = {"app.core.config_manager", "app.settings.service", "app.settings.session",
-                         "app.settings.presenter", "app.settings.editing",
-                         "app.settings.connection_test_controller", "app.ai.client"}
+                         "app.presentation.settings.presenter", "app.settings.editing",
+                         "app.presentation.settings.connection_test_controller", "app.ai.client"}
             assert not forbidden.intersection(sys.modules), forbidden.intersection(sys.modules)
         ''')
 
@@ -64,7 +64,7 @@ class SettingsArchitectureTests(unittest.TestCase):
             import sys
             from app.settings.model import SettingsSnapshot
             from app.settings.session import SettingsSession
-            from app.settings.presenter import SettingsPresenter
+            from app.presentation.settings.presenter import SettingsPresenter
             class Backend:
                 def load(self): return SettingsSnapshot()
                 def save(self, snapshot): return snapshot
@@ -77,7 +77,7 @@ class SettingsArchitectureTests(unittest.TestCase):
         ''')
 
     def test_view_imports_only_application_data_contracts(self):
-        allowed = {"app.settings.model", "app.settings.api_groups", "app.contracts.settings"}
+        allowed = {"app.contracts.settings"}
         for path in (ROOT / "ui/settings").rglob("*.py"):
             for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
                 if isinstance(node, ast.ImportFrom) and node.module and node.module.startswith("app."):

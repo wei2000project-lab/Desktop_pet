@@ -1,7 +1,7 @@
 # Dashboard 與設定功能：UI、串接、邏輯三層重構計畫
 
 建立日期：2026-10-15  
-狀態：第一、第二階段已完成；第三至第六階段尚未執行。
+狀態：第一至第四階段已完成；第五、第六階段尚未執行。
 2026-10-15 依使用者「先本地提交，一次做兩步驟」指示開始實作，結果記錄於第 11 節。
 
 ## 1. 目標與範圍
@@ -274,7 +274,7 @@ app/
 
 ## 9. 實作與回退原則
 
-- 按使用者指示每次執行兩個階段；目前已完成第一、第二階段，後續階段待下一次指示。
+- 按使用者指示每次執行兩個階段；目前已完成第一至第四階段，後續階段待下一次指示。
 - 各階段以可驗證的增量完成；階段未通過，不繼續疊加無關變動。
 - 計畫若需要變更範圍、既有操作行為或資料格式，先說明差異與原因。
 - 回退只針對本次修改，不使用會抹除使用者其他變更的整體還原方式。
@@ -339,3 +339,52 @@ python -B -m unittest discover -s tests -p 'test_settings_*.py'
 python -B -m unittest discover -s tests -p test_dashboard_shell.py
 python -B -m unittest discover -s tests -p test_env_data_format.py
 ```
+
+## 12. 第三、第四階段執行紀錄（2026-10-15）
+
+第 11 節為上一批的歷史紀錄，當時尚未接入的契約與搬移已於本批完成。
+
+### 執行前本地提交
+
+- 提交：`d87a63f`，`refactor: establish settings contracts and public view ports`。
+- 保存第一、第二階段的程式、測試與文件；未推送。
+- 仍排除原有 `tree.txt` 與資料格式計畫的移動。
+
+### 第三階段結果：已完成
+
+- 新增 `app/settings/display.py`，由邏輯層準備一般設定、API 群組與金鑰顯示資料，金鑰來源可以注入以便隔離測試。
+- 設定頁面改用 `SettingsDisplay`／`LegacyKeyInput`，群組編輯器改用 `APIGroupsDisplay`／`APIGroupsInput`；UI 不再匯入設定領域模型。
+- 正式 `groups_changed` 訊號已切換至原始輸入契約；移除舊 `collect_settings()`。
+- 編輯器不再讀取環境變數，不保存 schema 或金鑰環境引用，也不決定空白輸入的保存語義。
+- `groups_from_input()` 在邏輯層處理已保存金鑰保留、更換、來源切換、原始引用與溫度精度。
+- Session 分開保存畫面載入基準與正規化草稿；新增群組／Key 先在邏輯層登記，避免空白列或連續切換來源後遺失原始資料。
+- 欄位狀態文字由邏輯層產生，UI 僅依識別碼呈現。金鑰顯示／遮蔽與排版行為保留。
+- 新增顯示、編輯規則測試及暫存資料整合測試：來源切換再切回不產生變更；改名與空白輸入保留原金鑰；明確更換後只更新對應環境值，JSON 仍不含金鑰。
+
+### 第四階段結果：已完成
+
+- Presenter 與 Controller 已搬至 `app/presentation/settings/`，原檔移除，沒有雙份實作。
+- `connection_test_worker.py` 只負責 Qt 工作包裝、signal 回傳及完成後清除自己持有的金鑰。
+- `app/settings/connection_test.py` 負責單次同步連線、錯誤安全化、舊設定驗證及群組測試快照準備；不含 QObject／QRunnable。
+- Controller 保留工作排程、四個未完成工作上限、重複測試控制與過期結果判斷；指定 Key、停用 Key 手動測試及免金鑰規則改呼叫邏輯服務。
+- 更新 `WindowManager` 組裝、測試 helper、正式匯入與 patch 位置。
+- View 介面已使用具體顯示契約，移除第二階段的泛型過渡；假 View 的保存、取消與確認流程測試維持通過。
+- 隔離程序證明單次連線測試服務可以在不載入 PySide6／UI、不建立 QApplication 的情況下執行；使用模擬客戶端，沒有實際網路請求。
+
+### 本批驗證
+
+| 測試範圍 | 通過數量 |
+| --- | --- |
+| `test_settings_*.py` | 172 |
+| `test_env_data_format.py` | 10 |
+| `test_api_group*.py` | 59 |
+| `test_ai_errors.py` | 10 |
+| `test_dashboard_shell.py` | 10 |
+| `test_main_entrypoint.py` | 1 |
+| 合計 | 262 |
+
+- 延用專案內測試暫存目錄，保存流程只使用暫存資料與假金鑰。
+- 既有背景測試上限、關閉／刪除／重建後結果失效、環境金鑰與免金鑰測試均通過。
+- 未改動正式 AI 請求策略、設定檔格式、使用者資料位置或 Tavily 遺留邏輯。
+- 本批變更保留在工作目錄，尚未另行提交；第五、第六階段尚未開始。
+- 本次是相關範圍回歸，未宣稱全專案測試或人工操作驗收完成。

@@ -1,10 +1,11 @@
+from app.settings.display import settings_display
 import unittest
 from unittest.mock import Mock, patch
 
 from PySide6.QtCore import QObject, Signal
 
-from app.settings.connection_test_controller import ConnectionTestController
-from app.settings.presenter import SettingsPresenter
+from app.presentation.settings.connection_test_controller import ConnectionTestController
+from app.presentation.settings.presenter import SettingsPresenter
 from app.settings.session import SettingsSession
 from app.contracts.settings import CloseChoice, CloseRequest, ConnectionInputs
 from tests.settings_helpers import FakePool, FakeSettingsBackend, FakeWorker
@@ -57,7 +58,7 @@ class SettingsWorkflowTests(unittest.TestCase):
         self.view.apply_requested.emit()
         self.assertEqual(self.backend.saved[0].width, 400)
         self.view.commit_pending_input.assert_called_once()
-        self.view.load_snapshot.assert_called_with(self.backend.snapshot)
+        self.view.load_snapshot.assert_called_with(settings_display(self.backend.snapshot))
         self.view.show_saved.assert_called_once()
 
     def test_cancel_restores_snapshot_before_requesting_view_close(self):
@@ -65,7 +66,7 @@ class SettingsWorkflowTests(unittest.TestCase):
         self.view.cancel_requested.emit()
         self.assertEqual(self.backend.saved, [])
         self.assertFalse(self.session.is_dirty)
-        self.view.load_snapshot.assert_called_with(self.backend.snapshot)
+        self.view.load_snapshot.assert_called_with(settings_display(self.backend.snapshot))
         self.view.close_without_prompt.assert_called_once()
 
     def test_close_choice_and_failed_save_are_decided_in_application_layer(self):
@@ -76,7 +77,7 @@ class SettingsWorkflowTests(unittest.TestCase):
         self.assertTrue(self.session.is_dirty)
         self.view.confirm_close.return_value = CloseChoice.SAVE
         with (patch.object(self.backend, "save", side_effect=OSError("private-details")),
-              patch("app.settings.presenter.logger.error")):
+              patch("app.presentation.settings.presenter.logger.error")):
             self.view.close_requested.emit(request)
         self.assertFalse(request.accepted)
         self.view.show_warning.assert_called_with("儲存失敗", "設定未完整儲存，請稍後再試。")

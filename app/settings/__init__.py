@@ -1,11 +1,11 @@
-"""Settings data contracts and application services."""
+"""Settings domain models and application services."""
 
 from app.settings.model import ApiKeyEntry, SettingsSnapshot, SettingsValidationError
 from app.settings.api_groups import APIGroup, APIGroupKey, APIGroupSettings, APIGroupDataError
 
 
 def __getattr__(name):
-    """Importing UI data contracts must not initialize configuration services."""
+    """Importing domain models must not initialize configuration services."""
     from importlib import import_module
 
     modules = {

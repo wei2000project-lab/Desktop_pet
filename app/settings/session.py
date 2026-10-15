@@ -4,7 +4,11 @@ from dataclasses import replace
 
 from app.settings.api_group_service import APIGroupService
 from app.settings.api_groups import APIGroupSettings, ENV_SCHEMA_VERSION, migrate_legacy_api, validate_api_groups
-from app.settings.editing import normalize_group_input, normalize_key_entries, validate_group_draft
+from app.settings.editing import (
+    normalize_group_input, normalize_key_entries, validate_group_draft,
+    groups_from_input, group_feedback, new_api_group, new_api_key,
+)
+from app.settings.display import groups_display, group_display, key_display
 from app.settings.model import SettingsValidationError
 from app.settings.service import settings_service
 
@@ -48,6 +52,34 @@ class SettingsSession:
         self.original_snapshot = self.snapshot = snapshot
         self.original_groups = self.groups = groups
         self.group_error = error
+        self._form_baseline = groups
+        self._form_input = None
+
+    def display_groups(self):
+        self._form_baseline = self.groups
+        self._form_input = None
+        return groups_display(self.groups, self.group_mode, self.group_error)
+
+    def new_group_display(self):
+        group = new_api_group()
+        self._form_baseline = replace(self._form_baseline, groups=(*self._form_baseline.groups, group))
+        return group_display(group, self.groups.schema_version)
+
+    def new_key_display(self, group_id):
+        entry = new_api_key()
+        self._form_baseline = replace(self._form_baseline, groups=tuple(
+            replace(group, keys=(*group.keys, entry)) if group.id == group_id else group
+            for group in self._form_baseline.groups
+        ))
+        return key_display(entry, self.groups.schema_version)
+
+    def update_group_input(self, form):
+        if self.group_error is None:
+            self._form_input = form
+            self.update_groups(groups_from_input(form, self._form_baseline))
+
+    def group_feedback(self):
+        return group_feedback(self.groups, self._form_input, self._form_baseline)
 
     def update(self, values):
         values = dict(values)

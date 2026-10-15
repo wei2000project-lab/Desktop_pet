@@ -9,7 +9,7 @@ from PySide6.QtWidgets import (
 )
 from ui.settings.widgets.input_controls import FocusClearingWidget, ToggleSwitch
 
-from app.settings.model import SettingsSnapshot
+from app.contracts.settings import SettingsDisplay
 
 
 class GeneralPage(QScrollArea):
@@ -109,7 +109,7 @@ class GeneralPage(QScrollArea):
         self.always_on_top_status.style().unpolish(self.always_on_top_status)
         self.always_on_top_status.style().polish(self.always_on_top_status)
 
-    def load_snapshot(self, snapshot: SettingsSnapshot) -> None:
+    def load_snapshot(self, snapshot: SettingsDisplay) -> None:
         with QSignalBlocker(self.always_on_top_check):
             self.always_on_top_check.setChecked(snapshot.always_on_top)
         self._update_always_on_top_status(snapshot.always_on_top)

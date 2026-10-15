@@ -10,7 +10,7 @@ from PySide6.QtCore import QThreadPool, QEvent, QCoreApplication
 from PySide6.QtWidgets import QApplication, QLineEdit, QMessageBox
 
 from app.settings import ApiKeyEntry
-from app.settings.connection_test import ConnectionTestWorker, ConnectionTestSignals
+from app.presentation.settings.connection_test_worker import ConnectionTestWorker, ConnectionTestSignals
 from tests.settings_helpers import FakeSettingsBackend, FakePool, FakeWorker
 from tests.settings_helpers import create_settings_window
 

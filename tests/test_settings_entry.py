@@ -35,7 +35,7 @@ class SettingsEntryTests(unittest.TestCase):
 
     def open_settings(self):
         with (patch("ui.settings.SettingsWindow", return_value=self.window) as factory,
-              patch("app.settings.presenter.SettingsPresenter", return_value=self.presenter)):
+              patch("app.presentation.settings.presenter.SettingsPresenter", return_value=self.presenter)):
             self.manager.show_settings()
         self.app.processEvents()
         return factory

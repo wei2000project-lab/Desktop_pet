@@ -3,7 +3,7 @@ from PySide6.QtWidgets import (
     QFormLayout, QLabel, QScrollArea, QVBoxLayout, QWidget,
 )
 
-from app.settings.model import SettingsSnapshot
+from app.contracts.settings import SettingsDisplay
 from ui.settings.widgets.number_input import IntegerInput
 from ui.settings.widgets.input_controls import FocusClearingWidget
 
@@ -70,7 +70,7 @@ class AppearancePage(QScrollArea):
         self.width_input.interpretText()
         self.height_input.interpretText()
 
-    def load_snapshot(self, snapshot: SettingsSnapshot) -> None:
+    def load_snapshot(self, snapshot: SettingsDisplay) -> None:
         with QSignalBlocker(self.width_input), QSignalBlocker(self.height_input):
             self.width_input.setValue(snapshot.width)
             self.height_input.setValue(snapshot.height)

@@ -1,3 +1,4 @@
+from app.settings.display import settings_display
 import os
 import pathlib
 import unittest
@@ -355,7 +356,7 @@ class SettingsWindowTests(unittest.TestCase):
                            verify_ssl=False, custom_personality="保留人格")
         self.presenter.session.original_snapshot = snapshot
         self.presenter.session.snapshot = snapshot
-        self.window.load_snapshot(snapshot)
+        self.window.load_snapshot(settings_display(snapshot))
         page = self.window.ai_page
         page.base_url_input.setText(" https://example.test/v1 ")
         page.model_input.setText(" test-model ")

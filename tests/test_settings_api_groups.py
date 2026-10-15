@@ -132,7 +132,7 @@ class SettingsAPIGroupTests(unittest.TestCase):
 
     def test_group_check_ignores_rebuilt_rows(self):
         controller, group, row = self.start_test()
-        self.editor.load_settings(self.presenter.session.groups)
+        self.presenter.render()
         controller.pool.workers[0].finish()
         self.assertEqual(self.editor.group_rows[0]["keys"][0]["test_status"].text(), "")
         self.assertEqual(controller._jobs, {})
@@ -296,7 +296,8 @@ class SettingsAPIGroupTests(unittest.TestCase):
         first = self.editor.group_rows[0]
         second = self.editor.add_group()
         settings = self.presenter.session.groups
-        self.editor.load_settings(settings)
+        self.presenter.session.groups = settings
+        self.presenter.render()
         self.assertEqual(self.editor.selected_group_id, second["id"])
         self.editor.remove_group(second["id"])
         self.assertEqual(self.editor.selected_group_id, first["id"])
@@ -430,7 +431,8 @@ class SettingsAPIGroupTests(unittest.TestCase):
     def test_unedited_legacy_temperature_precision_is_preserved(self):
         settings = self.presenter.session.groups
         settings = replace(settings, groups=(replace(settings.groups[0], temperature=0.75),))
-        self.editor.load_settings(settings)
+        self.presenter.session.groups = settings
+        self.presenter.render()
         self.assertEqual(self.editor.group_rows[0]["temperature"].value(), 0.75)
         self.editor.group_rows[0]["name"].setText("改名但不改溫度")
         self.assertEqual(self.presenter.session.groups.groups[0].temperature, 0.75)
@@ -529,7 +531,7 @@ class SettingsAPIGroupTests(unittest.TestCase):
             group_backend=APIGroupService(self.store, lambda _event: None),
         )
         try:
-            restored = reopened.ai_page.group_editor.collect_settings().groups[0]
+            restored = reopened.ai_page.group_editor.collect_input().groups[0]
             self.assertEqual(restored.name, "重啟後群組")
             self.assertEqual(restored.model, "restart-model")
             self.assertEqual(restored.keys[0].priority, 7)
@@ -566,7 +568,7 @@ class SettingsAPIGroupTests(unittest.TestCase):
             real_replace(source, destination)
         with (patch("app.core.config_manager.os.replace", side_effect=fail_group),
               patch("ui.settings.settings_window.SettingsDialog.warning"),
-              patch("app.settings.presenter.logger.error")):
+              patch("app.presentation.settings.presenter.logger.error")):
             self.assertFalse(self.presenter.apply_changes())
         self.assertEqual(list(self.root.iterdir()), [])
         self.assertTrue(self.presenter.session.is_dirty)

@@ -94,7 +94,8 @@ class SettingsWindow(DashboardWindow):
             if page is not None:
                 page.load_snapshot(snapshot)
 
-    def load_groups(self, groups, enabled, error):
+    def load_groups(self, groups):
+        enabled, error = groups.enabled, groups.error
         if self.ai_page is None:
             return
         page = self.ai_page

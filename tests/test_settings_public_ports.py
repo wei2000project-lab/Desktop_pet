@@ -1,3 +1,4 @@
+from app.settings.display import groups_display
 """Public component boundaries remain usable without exposing widget rows."""
 import os
 import unittest
@@ -59,18 +60,18 @@ class SettingsPublicPortsTests(unittest.TestCase):
 
     def test_targets_track_deletion_and_rebuild_without_mutating_old_snapshot(self):
         editor = self.widget(APIGroupEditor)
-        editor.load_settings(self.groups())
+        editor.load_settings(groups_display(self.groups()))
         before = editor.connection_inputs()
         self.assertEqual(before.targets, frozenset({("group", ""), ("group", "key")}))
         editor.remove_key("group", "key")
         self.assertEqual(editor.connection_inputs().targets, frozenset({("group", "")}))
         self.assertIn(("group", "key"), before.targets)
-        editor.load_settings(self.groups())
+        editor.load_settings(groups_display(self.groups()))
         self.assertGreater(editor.connection_inputs().generation, before.generation)
 
     def test_raw_input_preserves_text_and_reports_changes_without_storage_rules(self):
         editor = self.widget(APIGroupEditor)
-        editor.load_settings(self.groups())
+        editor.load_settings(groups_display(self.groups()))
         before = editor.collect_input()
         self.assertIsInstance(before, APIGroupsInput)
         self.assertFalse(before.groups[0].keys[0].key_edited)
@@ -118,7 +119,7 @@ class SettingsPublicPortsTests(unittest.TestCase):
 
     def test_public_width_port_keeps_responsive_behavior(self):
         editor = self.widget(APIGroupEditor)
-        editor.load_settings(self.groups())
+        editor.load_settings(groups_display(self.groups()))
         editor.set_available_width(450)
         self.assertEqual(editor.master_detail_layout.direction(), QBoxLayout.TopToBottom)
         editor.set_available_width(800)

@@ -1,7 +1,10 @@
 """Background connection checks with credential-free result messages."""
 import re
 
-from PySide6.QtCore import QObject, QRunnable, Signal, Slot
+from dataclasses import dataclass, replace
+from app.settings.api_groups import APIGroupSettings
+from app.settings.api_group_resolver import resolve_api_request
+from app.settings.model import SettingsValidationError
 
 from app.ai.client import AIClient
 from app.ai.errors import AIErrorCategory, AIRequestError
@@ -35,31 +38,59 @@ def safe_failure_message(error: Exception) -> str:
     return "連線測試失敗，請確認網址、模型、金鑰及服務狀態。"
 
 
-class ConnectionTestSignals(QObject):
-    finished = Signal(int, bool, str)
+@dataclass(frozen=True)
+class ConnectionCheckResult:
+    success: bool
+    message: str
 
 
-class ConnectionTestWorker(QRunnable):
-    def __init__(self, request_id, base_url, api_key, model, verify_ssl):
-        super().__init__()
-        self.request_id = request_id
-        self.base_url = base_url
-        self.api_key = api_key
-        self.model = model
-        self.verify_ssl = verify_ssl
-        self.signals = ConnectionTestSignals()
+def run_connection_test(base_url, api_key, model, verify_ssl):
+    """One synchronous check; callers choose how to schedule it."""
+    try:
+        client = AIClient(base_url=base_url, api_key=api_key, model=model,
+                          verify_ssl=verify_ssl, timeout=15.0)
+        client.test_connection()
+    except Exception as error:
+        return ConnectionCheckResult(False, safe_failure_message(error))
+    return ConnectionCheckResult(True, "連線測試成功。")
 
-    @Slot()
-    def run(self):
-        try:
-            client = AIClient(
-                base_url=self.base_url, api_key=self.api_key, model=self.model,
-                verify_ssl=self.verify_ssl, timeout=15.0,
-            )
-            client.test_connection()
-        except Exception as error:
-            self.signals.finished.emit(self.request_id, False, safe_failure_message(error))
-        else:
-            self.signals.finished.emit(self.request_id, True, "連線測試成功。")
-        finally:
-            self.api_key = ""
+
+def legacy_fingerprint(snapshot, key):
+    if key is None:
+        return None
+    return (snapshot.base_url.strip(), key.strip(), snapshot.model.strip(), snapshot.verify_ssl)
+
+
+def prepare_legacy_test(snapshot, key):
+    fingerprint = legacy_fingerprint(snapshot, key)
+    if fingerprint is None:
+        return None
+    if not fingerprint[1]:
+        raise SettingsValidationError("請先輸入 API Key。")
+    # Keep legacy validation consistent with saving. Import only when needed;
+    # importing or executing the single network check needs no Qt services.
+    from app.settings.service import SettingsService
+    SettingsService().validate(snapshot)
+    return fingerprint
+
+
+def prepare_group_test(settings, group_id, key_id):
+    group = next((group for group in settings.groups if group.id == group_id), None)
+    if group is None:
+        raise ValueError("群組已刪除。")
+    if key_id:
+        key = next((key for key in group.keys if key.id == key_id), None)
+        if key is None:
+            raise ValueError("請先輸入 API Key。")
+        if group.auth_mode != "api_key":
+            raise ValueError("此群組目前使用免金鑰模式。")
+        group = replace(group, keys=(replace(key, enabled=True),))
+    elif group.auth_mode != "none":
+        raise ValueError("請指定要測試的 Key。")
+    else:
+        group = replace(group, keys=())
+    return resolve_api_request(APIGroupSettings((group,), group.id, settings.schema_version))
+
+
+def connection_arguments(snapshot):
+    return (snapshot.base_url, snapshot.api_key, snapshot.model, snapshot.verify_ssl)

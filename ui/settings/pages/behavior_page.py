@@ -3,7 +3,7 @@ from PySide6.QtWidgets import (
     QFormLayout, QLabel, QScrollArea, QVBoxLayout, QWidget,
 )
 
-from app.settings.model import SettingsSnapshot
+from app.contracts.settings import SettingsDisplay
 from ui.settings.widgets.number_input import IntegerInput
 from ui.settings.widgets.input_controls import FocusClearingWidget
 
@@ -61,6 +61,6 @@ class BehaviorPage(QScrollArea):
     def commit_pending_input(self) -> None:
         self.reading_idle_seconds_input.interpretText()
 
-    def load_snapshot(self, snapshot: SettingsSnapshot) -> None:
+    def load_snapshot(self, snapshot: SettingsDisplay) -> None:
         with QSignalBlocker(self.reading_idle_seconds_input):
             self.reading_idle_seconds_input.setValue(snapshot.reading_idle_seconds)

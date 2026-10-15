@@ -1,5 +1,4 @@
 """API group form: widget state and raw input events only."""
-import os
 
 from PySide6.QtCore import Signal, Qt
 from PySide6.QtWidgets import (
@@ -7,8 +6,9 @@ from PySide6.QtWidgets import (
     QPushButton, QStackedWidget, QVBoxLayout, QWidget, QSizePolicy,
 )
 
-from app.settings.api_groups import APIGroup, APIGroupKey, APIGroupSettings
-from app.contracts.settings import APIKeyInput, APIGroupInput, APIGroupsInput, GroupTestInputs
+from app.contracts.settings import (
+    APIKeyInput, APIGroupInput, APIGroupsInput, APIGroupsDisplay, GroupTestInputs,
+)
 from ui.settings.widgets.number_input import DecimalInput
 from ui.settings.widgets.input_controls import NoWheelCheckBox, NoWheelComboBox, ToggleSwitch
 
@@ -27,7 +27,6 @@ class APIGroupEditor(QWidget):
         self.generation = 0
         self._active_id = None
         self._selected_id = None
-        self._schema_version = 1
         self._narrow = False
         self.group_rows = []
         layout = QVBoxLayout(self)
@@ -75,13 +74,12 @@ class APIGroupEditor(QWidget):
         layout.addWidget(self.state_label)
         self._update_responsive_layout()
 
-    def load_settings(self, settings: APIGroupSettings):
+    def load_settings(self, settings: APIGroupsDisplay):
         self.generation += 1
         previous_selection = self._selected_id
         self._loading = True
         try:
             self._active_id = settings.active_group_id
-            self._schema_version = settings.schema_version
             for row in self.group_rows:
                 self.detail_stack.removeWidget(row["container"])
                 self.group_list_layout.removeWidget(row["list_button"])
@@ -248,7 +246,6 @@ class APIGroupEditor(QWidget):
                "active_badge": active_badge, "summary_url": summary_url,
                "summary_meta": summary_meta, "more_button": more_button,
                "summary_card": summary_card, "model_card": model_card, "key_card": key_card}
-        row["original_temperature"] = group.temperature
         row.update(test_button=test_button, test_status=test_status, testing=False)
         test_button.clicked.connect(lambda: self.test_requested.emit(group.id, ""))
         row["display_temperature"] = temperature.value()
@@ -309,14 +306,10 @@ class APIGroupEditor(QWidget):
         source.setCurrentIndex(source.findData(entry.source))
         source_badge = QLabel("環境變數")
         source_badge.setObjectName("settingsStatusBadge")
-        saved_key = (os.environ.get(entry.environment_variable, "")
-                     if self._schema_version == 2 and entry.source == "stored"
-                     and entry.environment_variable and not entry.key else "")
-        key = QLineEdit(entry.key or saved_key)
+        key = QLineEdit(entry.key)
         key.setEchoMode(QLineEdit.Password)
         key.setAccessibleName("群組 API Key")
-        if self._schema_version == 2 and entry.source == "stored" and entry.environment_variable:
-            key.setPlaceholderText("已保存引用；留空表示保留原金鑰")
+        key.setPlaceholderText(entry.placeholder)
         show = QPushButton("顯示")
         show.setMinimumWidth(max(show.sizeHint().width(),
                                  show.fontMetrics().horizontalAdvance("隱藏") + 32))
@@ -378,8 +371,7 @@ class APIGroupEditor(QWidget):
         extra_layout.addRow("", status)
         extra_body.hide()
         row = {"id": entry.id, "container": container, "name": name, "source": source,
-               "original_source": entry.source, "environment_variable": entry.environment_variable,
-               "key": key, "displayed_saved_key": saved_key, "initial_key_text": key.text(), "show": show,
+               "key": key, "initial_key_text": key.text(), "show": show,
                "priority": priority, "enabled": enabled,
                "enabled_text": enabled_text, "enabled_widget": enabled_widget, "status": status,
                "more": more, "delete_action": delete_action, "layout": layout,
@@ -483,13 +475,7 @@ class APIGroupEditor(QWidget):
             if duplicate:
                 row["advanced_button"].setChecked(True)
             for entry in row["keys"]:
-                if entry["source"].currentData() == "environment":
-                    text = "環境來源已設定（不顯示或保存內容）" if feedback.environment_available else "環境來源尚無值"
-                elif self._schema_version == 2 and entry["environment_variable"] and not entry["key"].text():
-                    text = "已保存引用；留空保留，刪除 Key 可清除"
-                else:
-                    text = "啟用" if entry["enabled"].isChecked() else "X：已暫停，原順位保留"
-                entry["status"].setText(text)
+                entry["status"].setText(feedback.key_statuses.get((row["id"], entry["id"]), ""))
 
     def _set_advanced_visible(self, row, visible):
         row["advanced_body"].setVisible(visible)
@@ -553,7 +539,7 @@ class APIGroupEditor(QWidget):
         return GroupTestInputs(self.generation, frozenset(targets))
 
     def collect_input(self) -> APIGroupsInput:
-        """Raw input port; phase three will switch the live change signal to it."""
+        """Return user input without interpreting persistence semantics."""
         groups = []
         for row in self.group_rows:
             keys = tuple(APIKeyInput(
@@ -569,28 +555,6 @@ class APIGroupEditor(QWidget):
                 row["temperature"].value() != row["display_temperature"],
             ))
         return APIGroupsInput(tuple(groups), self._active_id)
-
-    def collect_settings(self):
-        """Legacy conversion; replaced by application-side editing in phase three."""
-        groups = []
-        for row in self.group_rows:
-            keys = tuple(APIGroupKey(
-                entry["id"], entry["name"].text(),
-                ("" if self._schema_version == 2 and entry["original_source"] == "stored"
-                 and entry["key"].text() == entry["displayed_saved_key"]
-                 else entry["key"].text()),
-                entry["priority"].currentData(), entry["enabled"].isChecked(),
-                entry["source"].currentData(),
-                ("OPENAI_API_KEY" if entry["source"].currentData() == "environment" else
-                 entry["environment_variable"] if entry["original_source"] == "stored" else ""),
-            ) for entry in row["keys"])
-            groups.append(APIGroup(
-                row["id"], row["name"].text(), row["url"].text(), row["model"].text(),
-                (row["original_temperature"] if row["temperature"].value() == row["display_temperature"]
-                 else row["temperature"].value()),
-                row["ssl"].isChecked(), row["mode"].currentData(), keys,
-            ))
-        return APIGroupSettings(tuple(groups), self._active_id, self._schema_version)
 
     def commit_pending_input(self):
         for group in self.group_rows:
@@ -613,10 +577,10 @@ class APIGroupEditor(QWidget):
     def _changed(self, *_args):
         if not self._loading:
             self._update_titles()
-            self.settings_changed.emit(self.collect_settings())
+            self.settings_changed.emit(self.collect_input())
 
     def _update_titles(self):
-        settings = self.collect_settings()
+        settings = self.collect_input()
         for row, group in zip(self.group_rows, settings.groups):
             active = row["id"] == self._active_id
             selected = row["id"] == self._selected_id

@@ -54,7 +54,7 @@ class WindowManager:
         try:
             if self.settings_window is None:
                 from ui.settings import SettingsWindow
-                from app.settings.presenter import SettingsPresenter
+                from app.presentation.settings.presenter import SettingsPresenter
                 window = SettingsWindow()
                 try:
                     presenter = SettingsPresenter(window)

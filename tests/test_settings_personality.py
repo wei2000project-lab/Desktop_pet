@@ -1,3 +1,4 @@
+from app.settings.display import settings_display
 import os
 import unittest
 from dataclasses import replace
@@ -103,7 +104,7 @@ class SettingsPersonalityTests(unittest.TestCase):
                                custom_personality="保留內容")
             self.presenter.session.original_snapshot = snapshot
             self.presenter.session.snapshot = snapshot
-            self.window.load_snapshot(snapshot)
+            self.window.load_snapshot(settings_display(snapshot))
             self.assertFalse(self.presenter.session.is_dirty)
             self.assertEqual(self.presenter.session.snapshot.selected_personality, selected)
             self.assertEqual(self.page.custom_personality_input.isEnabled(), selected == "custom")

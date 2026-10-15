@@ -1,7 +1,7 @@
 """In-memory settings backends and connection workers for UI tests."""
 
 from app.settings import SettingsService, SettingsSnapshot
-from app.settings.connection_test import ConnectionTestSignals
+from app.presentation.settings.connection_test_worker import ConnectionTestSignals
 
 
 class FakeSettingsBackend:
@@ -44,7 +44,7 @@ class FakeWorker:
 
 
 def create_settings_window(settings_backend=None, group_backend=None, **view_options):
-    from app.settings.presenter import SettingsPresenter
+    from app.presentation.settings.presenter import SettingsPresenter
     from app.settings.session import SettingsSession
     from ui.settings import SettingsWindow
 

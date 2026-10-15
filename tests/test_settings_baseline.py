@@ -1,3 +1,5 @@
+from app.settings.editing import groups_from_input
+from app.settings.display import groups_display
 """Characterize source switching before moving editor rules out of the UI."""
 import os
 import unittest
@@ -26,7 +28,8 @@ class SettingsSourceBaselineTests(unittest.TestCase):
         settings = APIGroupSettings((APIGroup(
             "group", "Example", "https://example.test/v1", "model", keys=(entry,),
         ),), "group", 2)
-        self.editor.load_settings(settings)
+        self.baseline = settings
+        self.editor.load_settings(groups_display(settings))
         return self.editor.group_rows[0]["keys"][0]
 
     def test_saved_source_round_trip_preserves_reference_and_unchanged_value(self):
@@ -35,11 +38,11 @@ class SettingsSourceBaselineTests(unittest.TestCase):
                 "key", "Key", environment_variable="NOVA_BASELINE_FAKE",
             ))
         row["source"].setCurrentIndex(row["source"].findData("environment"))
-        switched = self.editor.collect_settings().groups[0].keys[0]
+        switched = groups_from_input(self.editor.collect_input(), self.baseline).groups[0].keys[0]
         self.assertEqual(switched.environment_variable, "OPENAI_API_KEY")
         self.assertEqual(switched.key, "")
         row["source"].setCurrentIndex(row["source"].findData("stored"))
-        restored = self.editor.collect_settings().groups[0].keys[0]
+        restored = groups_from_input(self.editor.collect_input(), self.baseline).groups[0].keys[0]
         self.assertEqual(restored.environment_variable, "NOVA_BASELINE_FAKE")
         self.assertEqual(restored.key, "")
 
@@ -49,7 +52,7 @@ class SettingsSourceBaselineTests(unittest.TestCase):
         ))
         row["source"].setCurrentIndex(row["source"].findData("stored"))
         row["key"].setText("fake-replacement")
-        changed = self.editor.collect_settings().groups[0].keys[0]
+        changed = groups_from_input(self.editor.collect_input(), self.baseline).groups[0].keys[0]
         self.assertEqual(changed.source, "stored")
         self.assertEqual(changed.environment_variable, "")
         self.assertEqual(changed.key, "fake-replacement")

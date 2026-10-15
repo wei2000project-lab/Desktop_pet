@@ -2,8 +2,8 @@
 from PySide6.QtCore import QObject
 
 from app.ai.prompt_builder import get_personality_option_labels
-from app.settings.connection_test_controller import ConnectionTestController
-from app.settings.editing import group_feedback, new_api_group, new_api_key
+from app.presentation.settings.connection_test_controller import ConnectionTestController
+from app.settings.display import settings_display
 from app.settings.model import SettingsValidationError
 from app.settings.session import SettingsSession
 from app.contracts.settings import CloseChoice
@@ -35,9 +35,9 @@ class SettingsPresenter(QObject):
         self.render()
 
     def render(self):
-        self.view.load_snapshot(self.session.snapshot)
-        self.view.load_groups(self.session.groups, self.session.group_mode, self.session.group_error)
-        self.view.show_group_feedback(group_feedback(self.session.groups))
+        self.view.load_snapshot(settings_display(self.session.snapshot))
+        self.view.load_groups(self.session.display_groups())
+        self.view.show_group_feedback(self.session.group_feedback())
         self.view.show_dirty_state(self.session.is_dirty)
 
     def update(self, values):
@@ -45,8 +45,8 @@ class SettingsPresenter(QObject):
         self.view.show_dirty_state(self.session.is_dirty)
 
     def update_groups(self, groups):
-        self.session.update_groups(groups)
-        self.view.show_group_feedback(group_feedback(self.session.groups))
+        self.session.update_group_input(groups)
+        self.view.show_group_feedback(self.session.group_feedback())
         self.view.show_dirty_state(self.session.is_dirty)
 
     def apply_changes(self):
@@ -112,10 +112,10 @@ class SettingsPresenter(QObject):
         self.connection_tests.start_group(group_id, key_id)
 
     def add_group(self):
-        self.view.add_api_group(new_api_group())
+        self.view.add_api_group(self.session.new_group_display())
 
     def add_key(self, group_id):
-        self.view.add_api_key(group_id, new_api_key())
+        self.view.add_api_key(group_id, self.session.new_key_display(group_id))
 
     def delete_group(self, group_id):
         if self.view.confirm_group_delete(group_id == self.session.groups.active_group_id):

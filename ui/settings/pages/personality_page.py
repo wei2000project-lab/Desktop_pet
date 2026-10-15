@@ -4,7 +4,7 @@ from PySide6.QtWidgets import (
     QScrollArea, QVBoxLayout, QWidget,
 )
 
-from app.settings.model import SettingsSnapshot
+from app.contracts.settings import SettingsDisplay
 from ui.settings.widgets.input_controls import FocusClearingWidget
 
 
@@ -82,7 +82,7 @@ class PersonalityPage(QScrollArea):
         if not self._loading:
             self.settings_changed.emit(self._selected_key, self.custom_personality_input.toPlainText())
 
-    def load_snapshot(self, snapshot: SettingsSnapshot) -> None:
+    def load_snapshot(self, snapshot: SettingsDisplay) -> None:
         self._loading = True
         try:
             self._selected_key = snapshot.selected_personality

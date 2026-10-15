@@ -2,8 +2,7 @@
 
 Input values describe the form, not storage instructions. In particular, a blank
 key or a changed source is interpreted by the application, never by this module.
-Group input/display contracts are introduced in phase two; runtime conversion
-and display loading switch to them in phase three.
+Input conversion and display loading belong to the application layer.
 """
 from dataclasses import dataclass, field
 from enum import Enum
@@ -137,3 +136,11 @@ class APIGroupsDisplay:
     active_group_id: str | None
     enabled: bool = True
     error: str | None = None
+
+
+@dataclass(frozen=True)
+class GroupFeedback:
+    status: str
+    completion_path_groups: frozenset[str]
+    environment_available: bool
+    key_statuses: dict[tuple[str, str], str] = field(default_factory=dict)

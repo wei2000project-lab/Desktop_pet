@@ -1,3 +1,5 @@
+from app.settings.editing import groups_from_input
+from app.settings.display import groups_display
 import configparser
 import json
 import os
@@ -18,7 +20,7 @@ from app.settings.api_groups import (
     ENV_SCHEMA_VERSION, deserialize_api_groups, serialize_api_groups,
 )
 from app.settings.api_groups import managed_key_name
-from app.settings.connection_test_controller import ConnectionTestController
+from app.presentation.settings.connection_test_controller import ConnectionTestController
 from app.settings.session import SettingsSession
 from app.settings.tool_settings import TOOL_KEY_ENV
 from app.contracts.settings import ConnectionInputs
@@ -198,7 +200,7 @@ class EnvDataFormatTests(unittest.TestCase):
                 "first", "主用", "", environment_variable=managed_key_name("first"),
             ))
             with patch.dict(os.environ, {managed_key_name("first"): "fake-saved-key"}):
-                editor.load_settings(saved)
+                editor.load_settings(groups_display(saved))
             editor.resize(480, 600)
             editor.show()
             app.processEvents()
@@ -220,17 +222,51 @@ class EnvDataFormatTests(unittest.TestCase):
             self.assertEqual(row["key"].echoMode(), QLineEdit.Password)
             self.assertEqual(row["show"].width(), button_width)
             self.assertEqual(row["show"].height(), button_height)
-            self.assertEqual(editor.collect_settings(), saved)
+            self.assertEqual(groups_from_input(editor.collect_input(), saved), saved)
 
             row["key"].setText("fake-replacement")
-            self.assertEqual(editor.collect_settings().groups[0].keys[0].key, "fake-replacement")
+            self.assertEqual(groups_from_input(editor.collect_input(), saved).groups[0].keys[0].key, "fake-replacement")
             row["key"].clear()
-            self.assertEqual(editor.collect_settings(), saved)
+            self.assertEqual(groups_from_input(editor.collect_input(), saved), saved)
             editor.remove_key("group", "first")
-            self.assertEqual(editor.collect_settings().groups[0].keys, ())
+            self.assertEqual(groups_from_input(editor.collect_input(), saved).groups[0].keys, ())
         finally:
             editor.close()
             editor.deleteLater()
+            app.processEvents()
+
+    def test_live_form_round_trip_keeps_saved_key_then_replaces_only_on_edit(self):
+        os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+        from PySide6.QtWidgets import QApplication
+        from tests.settings_helpers import create_settings_window
+
+        self.save(self.draft(APIGroupKey("first", "Key", "fake-original")))
+        saved = self.group_service.load()
+        variable = saved.groups[0].keys[0].environment_variable
+        app = QApplication.instance() or QApplication([])
+        window, presenter = create_settings_window(self.service, self.group_service)
+        try:
+            row = window.ai_page.group_editor.group_rows[0]
+            key = row["keys"][0]
+            key["source"].setCurrentIndex(key["source"].findData("environment"))
+            key["source"].setCurrentIndex(key["source"].findData("stored"))
+            self.assertFalse(presenter.session.is_dirty)
+            row["name"].setText("Renamed")
+            key["key"].clear()
+            self.assertTrue(presenter.apply_changes())
+            self.assertEqual(self.env.read_values()[variable], "fake-original")
+            self.assertEqual(presenter.session.groups.groups[0].keys[0].key, "")
+            rebuilt = window.ai_page.group_editor.group_rows[0]["keys"][0]
+            self.assertEqual(rebuilt["key"].text(), "fake-original")
+            rebuilt["key"].setText("fake-updated")
+            self.assertTrue(presenter.apply_changes())
+            self.assertEqual(self.env.read_values()[variable], "fake-updated")
+            self.assertNotIn("fake-updated", self.paths.api_groups_json.read_text(encoding="utf-8"))
+            self.assertFalse(presenter.session.is_dirty)
+        finally:
+            window._close_approved = True
+            window.close()
+            window.deleteLater()
             app.processEvents()
 
     def test_tool_format_preserves_other_settings_and_supports_replace_and_clear(self):

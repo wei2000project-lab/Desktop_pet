@@ -1,4 +1,4 @@
-"""Typed settings values shared by the current window and future Dashboard."""
+"""Application settings values; views receive separate display contracts."""
 from dataclasses import dataclass
 
 
