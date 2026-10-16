@@ -11,6 +11,11 @@ class Emotion(str, Enum):
 
 
 @dataclass(frozen=True)
+class EmotionStarted:
+    request_id: int
+
+
+@dataclass(frozen=True)
 class EmotionRequest:
     request_id: int
     emotion: Emotion

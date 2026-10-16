@@ -8,6 +8,14 @@ from app.animation.look_around import LookAroundAnimation
 
 
 class LookAroundAnimationTests(unittest.TestCase):
+    def make_animator(self):
+        animator = Animator.__new__(Animator)
+        animator._stopped = False
+        animator._clock = time.monotonic
+        animator.emotion_timer = Mock()
+        animator.reading_action_timer = Mock()
+        return animator
+
     def test_sequence_holds_directions_for_one_second(self):
         animation = LookAroundAnimation()
 
@@ -33,7 +41,7 @@ class LookAroundAnimationTests(unittest.TestCase):
         self.assertTrue(all(pathlib.Path(path).is_file() for path in animation.frames))
 
     def test_idle_roll_selects_look_around_blink_or_no_action(self):
-        animator = Animator.__new__(Animator)
+        animator = self.make_animator()
         animator.current_state = "idle"
         animator.last_activity_at = time.monotonic()
         animator.idle_to_reading_seconds = 300
@@ -51,7 +59,7 @@ class LookAroundAnimationTests(unittest.TestCase):
         animator.play_animation.assert_not_called()
 
     def test_play_animation_starts_look_around_frames(self):
-        animator = Animator.__new__(Animator)
+        animator = self.make_animator()
         animator.look_around_anim = LookAroundAnimation()
         animator.animation_timer = Mock()
 
@@ -63,7 +71,7 @@ class LookAroundAnimationTests(unittest.TestCase):
         animator.animation_timer.start.assert_called_once_with(250)
 
     def test_user_activity_interrupts_look_around(self):
-        animator = Animator.__new__(Animator)
+        animator = self.make_animator()
         animator.current_state = "look_around"
         animator.last_activity_at = 0
         animator.active_frames = ["frame"]

@@ -9,7 +9,7 @@ class AnimatorReadingSourceTests(unittest.TestCase):
         self.assertIn("DEFAULT_IDLE_TO_READING_SECONDS = 300", source)
         self.assertIn("self.idle_to_reading_seconds = self._load_idle_to_reading_seconds()", source)
         self.assertIn('config_manager.get_general_int("ReadingIdleSeconds"', source)
-        self.assertIn("self.last_activity_at = time.monotonic()", source)
+        self.assertIn("self.last_activity_at = self._clock()", source)
         self.assertIn("def check_idle_state", source)
         self.assertIn("self.enter_reading()", source)
         self.assertIn("def on_config_updated", source)

@@ -125,6 +125,8 @@ class SettingsEntryTests(unittest.TestCase):
 
         class Store:
             values = {"Width": 250, "Height": 250, "ReadingIdleSeconds": 300}
+            def get_general(self, key, default=None):
+                return self.values.get(key, default)
             def get_general_int(self, key, default):
                 return self.values.get(key, default)
             def get_general_bool(self, key, default):
@@ -161,6 +163,8 @@ class SettingsEntryTests(unittest.TestCase):
                 self.assertTrue(pet.windowFlags() & Qt.WindowStaysOnTopHint)
                 self.assertEqual(animator.idle_to_reading_seconds, 120)
             finally:
+                if animator is not None:
+                    animator.shutdown()
                 for key, callbacks in list(event_bus._listeners.items()):
                     for callback in list(callbacks):
                         if callback not in listeners_before.get(key, []):

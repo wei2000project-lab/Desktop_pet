@@ -15,7 +15,7 @@ class ConversationWebContextSourceTests(unittest.TestCase):
         source = pathlib.Path("app/ai/conversation_manager.py").read_text(encoding="utf-8")
 
         self.assertIn("history.append({\"role\": \"user\", \"content\": user_text})", source)
-        self.assertIn("history.append({\"role\": \"assistant\", \"content\": full_response})", source)
+        self.assertIn("history.append({\"role\": \"assistant\", \"content\": text})", source)
         self.assertNotIn("history.append(web_context", source)
 
 
