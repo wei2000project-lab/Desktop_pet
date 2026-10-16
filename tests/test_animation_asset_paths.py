@@ -2,10 +2,19 @@ from pathlib import Path
 import unittest
 
 from app.animation.reading import ReadingAnimation
+from app.animation.emotion import emotion_asset
 from app.core.paths import ASSETS_DIR, PET_ANIMATIONS_DIR, PET_ASSETS_DIR, PET_EMOTIONS_DIR
 
 
 class AnimationAssetPathTests(unittest.TestCase):
+    def test_emotion_assets_use_squint_and_canonical_directory(self):
+        for name in ("happy", "surprised", "squint"):
+            with self.subTest(name=name):
+                path = emotion_asset(name)
+                self.assertIsNotNone(path)
+                self.assertEqual(path, PET_EMOTIONS_DIR / f"Nova_{name}.png")
+        self.assertIsNone(emotion_asset("gaze"))
+
     def test_idle_image_uses_runtime_emotions_asset(self):
         source = Path("app/animation/animator.py").read_text(encoding="utf-8")
 

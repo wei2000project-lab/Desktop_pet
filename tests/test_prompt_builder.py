@@ -4,6 +4,24 @@ from app.ai.prompt_builder import build_system_prompt
 
 
 class PromptBuilderTests(unittest.TestCase):
+    def test_emotion_protocol_is_opt_in_until_conversation_parser_is_wired(self):
+        prompt = build_system_prompt({"system_prompt": "你是 Nova。"})
+        self.assertNotIn("[[emotion:", prompt)
+
+    def test_emotion_protocol_preserves_custom_personality(self):
+        prompt = build_system_prompt({
+            "system_prompt": "你是 Nova。", "selected_personality": "custom",
+            "custom_personality": "使用繁體中文。",
+        }, emotion_enabled=True)
+        self.assertIn("你是 Nova。", prompt)
+        self.assertIn("完整人格設定：\n使用繁體中文。", prompt)
+        self.assertEqual(prompt.count("回覆表情協定："), 1)
+        for name in ("happy", "surprised", "squint", "none"):
+            self.assertIn(name, prompt)
+        self.assertIn("懷疑、半信半疑", prompt)
+        self.assertIn("不要只因使用者提到情緒字詞", prompt)
+        self.assertIn("不自行抽機率", prompt)
+
     def test_build_system_prompt_does_not_add_reply_length_instruction(self):
         prompt = build_system_prompt(
             {"system_prompt": "你是 Nova。"},

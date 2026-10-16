@@ -1,6 +1,18 @@
 from typing import Any, Dict, List
 
 
+EMOTION_INSTRUCTION = (
+    "回覆表情協定：依對話語境與你準備回答的內容，選擇 Nova 回覆時的表情。"
+    "happy 表示開心、稱讚或慶祝；surprised 表示驚訝或意外；"
+    "squint 表示懷疑、半信半疑；沒有合適表情時選 none。"
+    "不要只因使用者提到情緒字詞、引用或否定句就選該表情，也不要在嚴肅安慰時錯配開心表情。"
+    "每則回覆必須從 [[emotion:名稱]] 開始，接一個換行再寫正常正文；"
+    "名稱只可為 happy、surprised、squint、none，不能使用 idle 或 gaze。"
+    "只輸出一次標記，不加前置空白或程式碼圍欄，不在正文重複控制標記。"
+    "不要輸出檔案路徑或任意動作指令。只判斷是否適合，不自行抽機率；程式會決定是否顯示。"
+)
+
+
 PERSONALITY_PROFILES = {
     "catgirl_companion": {
         "label": "貓娘陪伴型",
@@ -61,7 +73,7 @@ def _selected_personality_key(prompt_data: Dict[str, Any]) -> str:
     return ""
 
 
-def build_system_prompt(prompt_data: Dict[str, Any], max_chars: int = 0) -> str:
+def build_system_prompt(prompt_data: Dict[str, Any], max_chars: int = 0, *, emotion_enabled=False) -> str:
     base_prompt = (prompt_data.get("system_prompt") or "You are a helpful assistant.").strip()
     selected_personality = _selected_personality_key(prompt_data)
 
@@ -77,5 +89,9 @@ def build_system_prompt(prompt_data: Dict[str, Any], max_chars: int = 0) -> str:
 
     if personality_prompt:
         sections.append(f"完整人格設定：\n{personality_prompt}")
+
+    # Enable only when the conversation caller also strips the control prefix.
+    if emotion_enabled:
+        sections.append(EMOTION_INSTRUCTION)
 
     return "\n\n".join(section for section in sections if section)
