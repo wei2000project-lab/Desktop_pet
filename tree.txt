@@ -1,40 +1,44 @@
-Desktop Pet（目前 Git 追蹤檔案；不含執行期資料）
-├── API 設定系統重構計畫書.md
-├── 過往開發計畫
-│   ├── API 設定介面重構計畫書.md
-│   ├── 架構重構計畫.md
-│   ├── 桌寵重構與介面優化計畫書.md
-│   ├── 桌寵應用程式開啟MVP計畫.md
-│   └── 素材資源改動.md
-├── app
-│   ├── ai
+Desktop Pet
+專案目錄（2026-10-17）
+範圍：實際存在的 Git 追蹤檔案及未被忽略的新檔案。
+不列出 .git、快取、log、環境金鑰及本機執行資料；不記錄易變動的檔案大小。
+
+├── app/
+│   ├── ai/
 │   │   ├── __init__.py
 │   │   ├── api_keys.py
 │   │   ├── client.py
 │   │   ├── conversation_manager.py
 │   │   ├── conversation_memory.py
+│   │   ├── emotion_response.py
 │   │   ├── errors.py
 │   │   ├── prompt_builder.py
 │   │   ├── provider.py
 │   │   └── request_executor.py
-│   ├── animation
+│   ├── animation/
 │   │   ├── __init__.py
 │   │   ├── animator.py
 │   │   ├── blink.py
+│   │   ├── emotion.py
 │   │   ├── look_around.py
-│   │   └── reading.py
-│   ├── control
-│   │   ├── discovery
+│   │   ├── reading.py
+│   │   └── README.md
+│   ├── contracts/
+│   │   ├── __init__.py
+│   │   ├── emotion.py
+│   │   └── settings.py
+│   ├── control/
+│   │   ├── discovery/
 │   │   │   ├── __init__.py
 │   │   │   ├── index.py
 │   │   │   └── scanner.py
-│   │   ├── execution
+│   │   ├── execution/
 │   │   │   ├── __init__.py
 │   │   │   ├── launcher.py
 │   │   │   ├── request_handler.py
 │   │   │   ├── schedule.py
 │   │   │   └── service.py
-│   │   ├── resolution
+│   │   ├── resolution/
 │   │   │   ├── __init__.py
 │   │   │   ├── aliases.py
 │   │   │   ├── confidence.py
@@ -42,33 +46,43 @@ Desktop Pet（目前 Git 追蹤檔案；不含執行期資料）
 │   │   │   └── selector.py
 │   │   ├── __init__.py
 │   │   └── preferences.py
-│   ├── core
+│   ├── core/
 │   │   ├── __init__.py
 │   │   ├── application.py
+│   │   ├── categorized_data_migration.py
 │   │   ├── config_manager.py
 │   │   ├── data_migration.py
+│   │   ├── dotenv_file.py
 │   │   ├── event_bus.py
 │   │   ├── intent_router.py
 │   │   ├── paths.py
 │   │   ├── user_message_router.py
 │   │   └── window_manager.py
-│   ├── settings
+│   ├── presentation/
+│   │   ├── settings/
+│   │   │   ├── __init__.py
+│   │   │   ├── connection_test_controller.py
+│   │   │   ├── connection_test_worker.py
+│   │   │   ├── presenter.py
+│   │   │   └── view_port.py
+│   │   └── __init__.py
+│   ├── settings/
 │   │   ├── __init__.py
 │   │   ├── api_group_resolver.py
 │   │   ├── api_group_service.py
 │   │   ├── api_groups.py
 │   │   ├── connection_test.py
-│   │   ├── connection_test_controller.py
+│   │   ├── display.py
 │   │   ├── editing.py
+│   │   ├── env_group_storage.py
 │   │   ├── model.py
-│   │   ├── presenter.py
 │   │   ├── service.py
 │   │   ├── session.py
-│   │   └── view_contracts.py
-│   ├── utils
+│   │   └── tool_settings.py
+│   ├── utils/
 │   │   ├── __init__.py
 │   │   └── logger.py
-│   ├── web
+│   ├── web/
 │   │   ├── __init__.py
 │   │   ├── context.py
 │   │   ├── decision.py
@@ -76,46 +90,53 @@ Desktop Pet（目前 Git 追蹤檔案；不含執行期資料）
 │   │   ├── search.py
 │   │   └── service.py
 │   └── __init__.py
-├── assets
-│   ├── 素材資料
-│   │   ├── 4c9778a4-3304-4de0-a2b1-e597ba134b0b.png
-│   │   ├── Codex 圖像 2026年9月14日 下午03_00_41.png
-│   │   ├── Nova_right.png
-│   │   ├── Nova.png
-│   │   └── reading_01.png
-│   └── pet
-│       ├── animations
-│       │   ├── eyes_closing
-│       │   │   ├── Nova_eyes_closing_01.png
-│       │   │   ├── Nova_eyes_closing_02.png
-│       │   │   └── Nova_eyes_closing_03.png
-│       │   ├── look_around
-│       │   │   ├── Nova_looking_front.png
-│       │   │   ├── Nova_looking_left.png
-│       │   │   └── Nova_looking_right.png
-│       │   └── reading
-│       │       ├── reading_01.png
-│       │       ├── reading_02.png
-│       │       ├── reading_03.png
-│       │       ├── reading_04.png
-│       │       └── reading_05.png
-│       └── emotions
-│           ├── Nova_gaze.png
-│           ├── Nova_happy.png
-│           ├── Nova_idle.png
-│           └── Nova_surprised.png
-├── data
-│   ├── app_control
+├── assets/
+│   ├── pet/
+│   │   ├── animations/
+│   │   │   ├── eyes_closing/
+│   │   │   │   ├── Nova_eyes_closing_01.png
+│   │   │   │   ├── Nova_eyes_closing_02.png
+│   │   │   │   └── Nova_eyes_closing_03.png
+│   │   │   ├── look_around/
+│   │   │   │   ├── Nova_looking_front.png
+│   │   │   │   ├── Nova_looking_left.png
+│   │   │   │   └── Nova_looking_right.png
+│   │   │   └── reading/
+│   │   │       ├── reading_01.png
+│   │   │       ├── reading_02.png
+│   │   │       ├── reading_03.png
+│   │   │       ├── reading_04.png
+│   │   │       └── reading_05.png
+│   │   └── emotions/
+│   │       ├── Nova_happy.png
+│   │       ├── Nova_idle.png
+│   │       ├── Nova_squint.png
+│   │       └── Nova_surprised.png
+│   └── 素材資料/
+│       ├── 4c9778a4-3304-4de0-a2b1-e597ba134b0b.png
+│       ├── Codex 圖像 2026年9月14日 下午03_00_41.png
+│       ├── Nova.png
+│       ├── Nova_right.png
+│       └── reading_01.png
+├── data/
+│   ├── app_control/
 │   │   └── aliases.json
-│   └── config
+│   └── config/
 │       ├── app.defaults.ini
 │       └── prompt.json
-├── tests
+├── tests/
+│   ├── fixtures/
+│   │   ├── emotion_context_cases.json
+│   │   └── emotion_context_report_20261017.json
+│   ├── emotion_helpers.py
+│   ├── manual_emotion_context.py
+│   ├── settings_boundaries.py
 │   ├── settings_helpers.py
 │   ├── test_ai_client.py
 │   ├── test_ai_errors.py
 │   ├── test_ai_request_executor.py
 │   ├── test_animation_asset_paths.py
+│   ├── test_animator_emotion.py
 │   ├── test_animator_reading_source.py
 │   ├── test_api_group_resolver.py
 │   ├── test_api_group_runtime.py
@@ -133,17 +154,23 @@ Desktop Pet（目前 Git 追蹤檔案；不含執行期資料）
 │   ├── test_app_schedule.py
 │   ├── test_app_selector.py
 │   ├── test_bubble_toggle.py
+│   ├── test_categorized_data_migration.py
 │   ├── test_chat_cancel_source.py
 │   ├── test_config_manager_paths.py
+│   ├── test_conversation_emotion.py
 │   ├── test_conversation_manager.py
 │   ├── test_conversation_memory.py
 │   ├── test_conversation_web_context_source.py
 │   ├── test_dashboard_shell.py
 │   ├── test_data_migration.py
+│   ├── test_emotion_policy.py
+│   ├── test_emotion_response.py
+│   ├── test_env_data_format.py
 │   ├── test_intent_router.py
 │   ├── test_look_around_animation.py
 │   ├── test_main_entrypoint.py
 │   ├── test_message_formatting.py
+│   ├── test_pet_emotion_display.py
 │   ├── test_project_paths.py
 │   ├── test_prompt_builder.py
 │   ├── test_reading_animation.py
@@ -151,24 +178,30 @@ Desktop Pet（目前 Git 追蹤檔案；不含執行期資料）
 │   ├── test_settings_api_groups.py
 │   ├── test_settings_api_keys.py
 │   ├── test_settings_architecture.py
+│   ├── test_settings_baseline.py
+│   ├── test_settings_boundaries.py
+│   ├── test_settings_connection_test.py
 │   ├── test_settings_dialogs.py
+│   ├── test_settings_display.py
+│   ├── test_settings_editing.py
 │   ├── test_settings_entry.py
 │   ├── test_settings_input_controls.py
 │   ├── test_settings_personality.py
+│   ├── test_settings_public_ports.py
 │   ├── test_settings_service.py
 │   ├── test_settings_session.py
 │   ├── test_settings_window.py
 │   ├── test_settings_workflow.py
 │   └── test_web_tools.py
-├── ui
-│   ├── dashboard
+├── ui/
+│   ├── dashboard/
 │   │   ├── __init__.py
 │   │   ├── dashboard_window.py
 │   │   ├── page_registry.py
 │   │   ├── sidebar.py
 │   │   └── styles.py
-│   ├── pet
-│   │   ├── dialogs
+│   ├── pet/
+│   │   ├── dialogs/
 │   │   │   ├── __init__.py
 │   │   │   ├── app_open_confirmation.py
 │   │   │   └── app_preference_choice.py
@@ -176,15 +209,15 @@ Desktop Pet（目前 Git 追蹤檔案；不含執行期資料）
 │   │   ├── bubble.py
 │   │   ├── desktop_pet.py
 │   │   └── message_formatting.py
-│   ├── settings
-│   │   ├── pages
+│   ├── settings/
+│   │   ├── pages/
 │   │   │   ├── __init__.py
 │   │   │   ├── ai_page.py
 │   │   │   ├── appearance_page.py
 │   │   │   ├── behavior_page.py
 │   │   │   ├── general_page.py
 │   │   │   └── personality_page.py
-│   │   ├── widgets
+│   │   ├── widgets/
 │   │   │   ├── __init__.py
 │   │   │   ├── api_group_editor.py
 │   │   │   ├── input_controls.py
@@ -194,8 +227,18 @@ Desktop Pet（目前 Git 追蹤檔案；不含執行期資料）
 │   │   ├── page_registry.py
 │   │   ├── settings_window.py
 │   │   └── styles.py
-│   ├── README.md
-│   └── __init__.py
+│   ├── __init__.py
+│   └── README.md
+├── 過往開發計畫/
+│   ├── AI語境情緒動作實作計畫.md
+│   ├── API 設定介面重構計畫書.md
+│   ├── API 設定系統重構計畫書.md
+│   ├── UI、串接、邏輯三層重構計畫.md
+│   ├── 架構重構計畫.md
+│   ├── 桌寵應用程式開啟MVP計畫.md
+│   ├── 桌寵重構與介面優化計畫書.md
+│   ├── 素材資源改動.md
+│   └── 資料格式與目錄分類計畫.md
 ├── .gitignore
 ├── main.py
 ├── requirements.txt

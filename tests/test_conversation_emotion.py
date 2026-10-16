@@ -136,6 +136,7 @@ class ConversationEmotionTests(unittest.TestCase):
         os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
         from PySide6.QtWidgets import QApplication
         from app.animation.animator import Animator
+        from app.animation.emotion import EMOTION_HOLD_MS
         app = QApplication.instance() or QApplication([])
         now = [100.0]
         store = Mock()
@@ -159,7 +160,7 @@ class ConversationEmotionTests(unittest.TestCase):
                     else:
                         request["on_error_cb"]("synthetic error")
                     self.assertTrue(animator.emotion_timer.isActive())
-                    now[0] += 3
+                    now[0] += EMOTION_HOLD_MS / 1000
                     animator.on_emotion_timeout()
                     self.assertEqual(animator.current_state, "idle")
             finally:

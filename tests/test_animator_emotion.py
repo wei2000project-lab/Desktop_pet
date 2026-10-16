@@ -10,6 +10,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 from PySide6.QtWidgets import QApplication
 from PySide6.QtCore import QThread
 from app.animation.animator import Animator
+from app.animation.emotion import EMOTION_HOLD_MS
 from app.contracts.emotion import Emotion, EmotionStarted, EmotionRequest, EmotionFinished
 from tests.emotion_helpers import EmotionTestBus
 
@@ -122,12 +123,13 @@ class AnimatorEmotionTests(unittest.TestCase):
         self.assertEqual(self.animator.current_state, "emotion")
         self.assertFalse(self.animator.emotion_timer.isActive())
         self.bus.publish("emotion_request_finished", EmotionFinished(1))
-        self.assertEqual(self.animator.emotion_timer.interval(), 3000)
-        self.now += 2.9
+        self.assertEqual(self.animator.emotion_timer.interval(), 1500)
+        deadline = self.now + EMOTION_HOLD_MS / 1000
+        self.now = deadline - 0.1
         self.bus.publish("emotion_request_finished", EmotionFinished(1))
         self.animator.on_emotion_timeout()
         self.assertEqual(self.animator.current_state, "emotion")
-        self.now += 0.1
+        self.now = deadline
         self.animator.on_emotion_timeout()
         self.assertEqual(self.animator.current_state, "idle")
         self.assertTrue(self.frames()[-1].endswith("Nova_idle.png"))
@@ -135,24 +137,24 @@ class AnimatorEmotionTests(unittest.TestCase):
     def test_new_emotion_ignores_old_finish_and_queued_timeout(self):
         self.start()
         self.bus.publish("emotion_request_finished", EmotionFinished(1))
-        self.now += 2
+        self.now += 0.5
         self.start(2, Emotion.SURPRISED)
         self.bus.publish("emotion_request_finished", EmotionFinished(1))
-        self.now += 2
+        self.now += 1
         self.animator.on_emotion_timeout()
         self.assertEqual(self.animator.current_state, "emotion")
         self.assertTrue(self.frames()[-1].endswith("Nova_surprised.png"))
         self.bus.publish("emotion_request_finished", EmotionFinished(2))
         self.animator.on_emotion_timeout()
         self.assertEqual(self.animator.current_state, "emotion")
-        self.now += 3
+        self.now += EMOTION_HOLD_MS / 1000
         self.animator.on_emotion_timeout()
         self.assertEqual(self.animator.current_state, "idle")
 
     def test_none_in_new_request_does_not_reset_previous_emotion_deadline(self):
         self.start()
         self.bus.publish("emotion_request_finished", EmotionFinished(1))
-        self.now += 2
+        self.now += 0.5
         self.start(2, Emotion.NONE)
         self.bus.publish("emotion_request_finished", EmotionFinished(2))
         self.now += 1
@@ -186,7 +188,7 @@ class AnimatorEmotionTests(unittest.TestCase):
         self.start()
         self.bus.publish("emotion_request_finished", EmotionFinished(1))
         self.animator.play_animation("reading")
-        self.now += 3
+        self.now += EMOTION_HOLD_MS / 1000
         self.animator.on_emotion_timeout()
         self.assertEqual(self.animator.current_state, "reading")
         self.start(2)

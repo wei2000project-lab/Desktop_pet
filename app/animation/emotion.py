@@ -8,7 +8,7 @@ from app.core.paths import PET_EMOTIONS_DIR
 
 
 DEFAULT_EMOTION_RATE = 0.3
-EMOTION_HOLD_MS = 3000
+EMOTION_HOLD_MS = 1500
 _ASSET_NAMES = {
     Emotion.HAPPY: "Nova_happy.png",
     Emotion.SURPRISED: "Nova_surprised.png",
