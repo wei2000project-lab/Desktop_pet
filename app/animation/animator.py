@@ -13,7 +13,6 @@ from app.animation.blink import BlinkAnimation
 from app.animation.look_around import LookAroundAnimation
 from app.animation.reading import ReadingAnimation
 from app.animation.emotion import EmotionPolicy, emotion_asset, load_emotion_rate, EMOTION_HOLD_MS
-from app.contracts.emotion import Emotion
 
 class Animator(QObject):
     DEFAULT_IDLE_TO_READING_SECONDS = 300
@@ -29,7 +28,6 @@ class Animator(QObject):
         self._stopped = False
         self._subscriptions = []
         self.emotion_rate = load_emotion_rate(config_manager)
-        logger.info("Emotion configuration loaded | rate=%s", self.emotion_rate)
         self._latest_request_id = 0
         self._request_open = False
         self._candidate_received = False
@@ -110,29 +108,18 @@ class Animator(QObject):
         self._request_open = True
         self._candidate_received = False
         self._emotion_policy = EmotionPolicy(self.emotion_rate, random_value=self._random_value)
-        logger.info("Emotion request started | request=%s | rate=%s",
-                    request.request_id, self._emotion_policy.rate)
         self.record_chat_activity()
 
     def on_emotion_requested(self, request):
         if (self._stopped or not self._request_open or self._candidate_received
                 or request.request_id != self._latest_request_id):
-            logger.info("Emotion candidate ignored | request=%s | latest=%s | stopped=%s | open=%s | duplicate=%s",
-                        request.request_id, self._latest_request_id, self._stopped,
-                        self._request_open, self._candidate_received)
             return
         self._candidate_received = True
         path = emotion_asset(request.emotion)
         # Decode before interrupting: an existing but broken PNG is not usable.
         available = path is not None and not QImageReader(str(path)).read().isNull()
         if self._emotion_policy.choose(request.emotion, asset_available=available) is None:
-            reason = ("none" if request.emotion == Emotion.NONE else
-                      "asset_unavailable" if not available else
-                      "rate_zero" if self._emotion_policy.rate == 0 else "rate_miss")
-            logger.info("Emotion skipped | request=%s | reason=%s | rate=%s",
-                        request.request_id, reason, self._emotion_policy.rate)
             return
-        previous_state = self.current_state
         self._clear_emotion()
         self.animation_timer.stop()
         self.reading_action_timer.stop()
@@ -140,8 +127,6 @@ class Animator(QObject):
         self.active_frame_index = 0
         self.current_state = "emotion"
         self._emotion_request_id = request.request_id
-        logger.info("Emotion applied | request=%s | choice=%s | previous_state=%s",
-                    request.request_id, self._emotion_policy.selected.value, previous_state)
         self.publish_frame(str(path))
 
     def on_emotion_finished(self, request):
@@ -153,8 +138,6 @@ class Animator(QObject):
                 and self._emotion_deadline is None):
             self._emotion_deadline = self._clock() + EMOTION_HOLD_MS / 1000
             self.emotion_timer.start(EMOTION_HOLD_MS)
-            logger.info("Emotion hold started | request=%s | duration_ms=%s",
-                        request.request_id, EMOTION_HOLD_MS)
 
     def on_emotion_timeout(self):
         if self._stopped or self.current_state != "emotion" or self._emotion_deadline is None:
@@ -164,7 +147,6 @@ class Animator(QObject):
             # Qt timers can wake early, or an old timeout may already be queued.
             self.emotion_timer.start(max(1, math.ceil(remaining * 1000)))
             return
-        logger.info("Emotion expired | request=%s | next=idle", self._emotion_request_id)
         self._clear_emotion()
         self.current_state = "idle"
         self.record_chat_activity()
@@ -288,7 +270,6 @@ class Animator(QObject):
     def on_config_updated(self):
         self.idle_to_reading_seconds = self._load_idle_to_reading_seconds()
         self.emotion_rate = load_emotion_rate(config_manager)
-        logger.info("Emotion configuration updated | rate=%s", self.emotion_rate)
         self.on_user_activity()
 
     def _load_idle_to_reading_seconds(self) -> int:

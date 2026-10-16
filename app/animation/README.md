@@ -31,23 +31,13 @@ EmotionRate = 0.3
 設定讀取優先順序為 `data/config/app.ini` → `data/config/app.defaults.ini` →
 Python 的 `DEFAULT_EMOTION_RATE` 備援值。因此只修改 Python 常數，不會覆蓋 INI 中已有的值。
 
-## 未觸發時的診斷
+## 日誌
 
-在 `logs/app.log` 搜尋 `Emotion`，以 `request` 對應同一次回覆：
+正常圖片切換與情緒解析、採用、略過、到期不再寫入診斷 log。
+保留圖片不存在／無法解碼、未知動畫及原有 API 等錯誤或警告紀錄。
+圖片繪製通知與解析狀態仍供回歸測試使用，不寫入日誌。
 
-- `Emotion configuration loaded | rate=...`：啟動時實際生效的機率。
-- `Emotion parsed | request=... | header=valid | choice=happy`：模型選擇及解析結果。
-- `header=missing/invalid_name/malformed/too_long/truncated`：未按協定提供可用標記；不記錄原始回覆或非法標記內容。
-- `Emotion skipped | reason=none/rate_zero/rate_miss/asset_unavailable`：不切換的原因。
-- `Emotion applied`：已採用並發布表情圖片；`Emotion hold started` 與 `Emotion expired` 表示結束後的保留與到期。
-- `Emotion candidate ignored`：候選已過期、重複或請求已結束。
-- `Pet frame received | file=... | main_thread=... | visible=...`：桌寵顯示端收到圖片。
-- `Pet frame painted | file=...`：圖片 QLabel 的 paintEvent 已完成；可與接收紀錄比對是否被其他圖片取代。
-- `Pet frame decode failed`：圖片無法解碼，保留原先顯示內容。
-
-`rate=1` 仍不會將 `none` 或無效標記強制變成表情。調整設定檔後重啟，先確認 log 的實際 rate。
-`Emotion applied` 只代表動畫層採用，不等於已完成 UI 繪製。一般動畫也會留下圖片診斷紀錄；
-測試與正式程式可能共用同一 log，需依啟動時間與請求時段區分。
+`rate=1` 仍不會將 `none` 或無效標記強制變成表情。調整設定檔後須重啟程式。
 
 ## 模組與事件
 

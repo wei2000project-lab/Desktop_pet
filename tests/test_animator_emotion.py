@@ -72,26 +72,20 @@ class AnimatorEmotionTests(unittest.TestCase):
             self.roll.side_effect = AssertionError("rate=1 must not sample")
             with patch("app.animation.animator.config_manager", store):
                 self.animator.on_config_updated()
-            with self.assertLogs("nova", level="INFO") as logs:
+            with self.assertNoLogs("nova", level="DEBUG"):
                 self.start(emotion=Emotion.HAPPY)
             self.assertEqual(self.animator.emotion_rate, 1)
             self.assertTrue(self.frames()[-1].endswith("Nova_happy.png"))
             self.assertEqual(self.animator.current_state, "emotion")
             self.roll.assert_not_called()
-            self.assertTrue(any("rate=1.0" in line for line in logs.output))
-            self.assertTrue(any("Emotion applied" in line for line in logs.output))
 
-    def test_skip_diagnostics_distinguish_probability_none_and_bad_asset(self):
+    def test_skipped_emotions_do_not_write_diagnostic_logs(self):
         self.roll.return_value = 0.99
-        with self.assertLogs("nova", level="INFO") as logs:
+        with self.assertNoLogs("nova", level="DEBUG"):
             self.start(1, Emotion.HAPPY)
             self.start(2, Emotion.NONE)
             with patch("app.animation.animator.emotion_asset", return_value=None):
                 self.start(3, Emotion.SQUINT)
-        reasons = [line for line in logs.output if "Emotion skipped" in line]
-        self.assertEqual(len(reasons), 3)
-        for line, reason in zip(reasons, ("rate_miss", "none", "asset_unavailable")):
-            self.assertIn("reason=" + reason, line)
 
     def test_none_and_missed_roll_leave_current_animation_running(self):
         for request_id, emotion in ((1, Emotion.NONE), (2, Emotion.HAPPY)):

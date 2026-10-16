@@ -55,16 +55,12 @@ class ConversationEmotionTests(unittest.TestCase):
         self.store.save_history.assert_called_once()
         self.assertEqual(len(self.bus.values("emotion_requested")), 1)
 
-    def test_diagnostic_log_records_choice_once_without_response_body(self):
+    def test_emotion_parsing_does_not_write_diagnostic_logs(self):
         request = self.start()
-        with self.assertLogs("nova", level="INFO") as logs:
+        with self.assertNoLogs("nova", level="DEBUG"):
             for char in "[[emotion:happy]]\nprivate response":
                 request["on_chunk_cb"](char)
-            request["on_finished_cb"]("[[emotion:happy]]\nprivate response")
-        parsed = [line for line in logs.output if "Emotion parsed" in line]
-        self.assertEqual(len(parsed), 1)
-        self.assertIn("request=1 | header=valid | choice=happy", parsed[0])
-        self.assertNotIn("private response", "\n".join(logs.output))
+        request["on_finished_cb"]("[[emotion:happy]]\nprivate response")
 
     def test_final_only_and_single_chunk_fallback_have_same_result(self):
         for with_chunk in (False, True):

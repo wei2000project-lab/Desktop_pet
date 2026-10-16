@@ -1,5 +1,5 @@
 import os
-from PySide6.QtCore import Qt, QPoint, QSize, Signal, QThread
+from PySide6.QtCore import Qt, QPoint, QSize, Signal
 from PySide6.QtGui import QPixmap, QMouseEvent, QAction
 from PySide6.QtWidgets import QWidget, QLabel, QVBoxLayout, QMenu
 from app.utils.logger import logger
@@ -24,7 +24,6 @@ class PetImageLabel(QLabel):
         if self._pending_frame is not None:
             path = self._pending_frame
             self._pending_frame = None
-            logger.info("Pet frame painted | file=%s", os.path.basename(path))
             self.frame_painted.emit(path)
 
 
@@ -84,11 +83,6 @@ class DesktopPet(QWidget):
             self.pet_width, self.pet_height, 
             Qt.IgnoreAspectRatio, 
             Qt.SmoothTransformation
-        )
-        logger.info(
-            "Pet frame received | file=%s | main_thread=%s | visible=%s | size=%sx%s",
-            os.path.basename(path), QThread.currentThread() == self.thread(),
-            self.isVisible(), self.pet_width, self.pet_height,
         )
         self.image_label.set_frame(scaled_pixmap, path)
         
