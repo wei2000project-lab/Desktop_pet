@@ -158,6 +158,10 @@ class ConversationManager:
         reply = self._reply
         if not reply.emotion_sent and reply.parser.emotion is not None:
             reply.emotion_sent = True
+            logger.info(
+                "Emotion parsed | request=%s | header=%s | choice=%s",
+                self._request_id, reply.parser.header_status, reply.parser.emotion.value,
+            )
             event_bus.publish("emotion_requested", EmotionRequest(self._request_id, reply.parser.emotion))
 
     def _publish_text(self, text):

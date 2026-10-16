@@ -61,6 +61,38 @@ class AnimatorEmotionTests(unittest.TestCase):
                 self.animator.check_idle_state()
                 self.assertEqual(len(self.frames()), count)
 
+    def test_runtime_ini_rate_one_reaches_animator_and_does_not_roll(self):
+        from app.core.config_manager import ConfigManager, read_layered_ini
+        from app.core.paths import PROJECT_ROOT
+        with tempfile.TemporaryDirectory() as directory:
+            runtime = Path(directory) / "app.ini"
+            runtime.write_text("[General]\nEmotionRate = 1\n", encoding="utf-8")
+            store = object.__new__(ConfigManager)
+            store.general_config = read_layered_ini(PROJECT_ROOT / "data/config/app.defaults.ini", runtime)
+            self.roll.side_effect = AssertionError("rate=1 must not sample")
+            with patch("app.animation.animator.config_manager", store):
+                self.animator.on_config_updated()
+            with self.assertLogs("nova", level="INFO") as logs:
+                self.start(emotion=Emotion.HAPPY)
+            self.assertEqual(self.animator.emotion_rate, 1)
+            self.assertTrue(self.frames()[-1].endswith("Nova_happy.png"))
+            self.assertEqual(self.animator.current_state, "emotion")
+            self.roll.assert_not_called()
+            self.assertTrue(any("rate=1.0" in line for line in logs.output))
+            self.assertTrue(any("Emotion applied" in line for line in logs.output))
+
+    def test_skip_diagnostics_distinguish_probability_none_and_bad_asset(self):
+        self.roll.return_value = 0.99
+        with self.assertLogs("nova", level="INFO") as logs:
+            self.start(1, Emotion.HAPPY)
+            self.start(2, Emotion.NONE)
+            with patch("app.animation.animator.emotion_asset", return_value=None):
+                self.start(3, Emotion.SQUINT)
+        reasons = [line for line in logs.output if "Emotion skipped" in line]
+        self.assertEqual(len(reasons), 3)
+        for line, reason in zip(reasons, ("rate_miss", "none", "asset_unavailable")):
+            self.assertIn("reason=" + reason, line)
+
     def test_none_and_missed_roll_leave_current_animation_running(self):
         for request_id, emotion in ((1, Emotion.NONE), (2, Emotion.HAPPY)):
             self.roll.return_value = 0.9

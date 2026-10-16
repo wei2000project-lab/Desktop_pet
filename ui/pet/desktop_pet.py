@@ -1,10 +1,32 @@
 import os
-from PySide6.QtCore import Qt, QPoint, QSize
+from PySide6.QtCore import Qt, QPoint, QSize, Signal, QThread
 from PySide6.QtGui import QPixmap, QMouseEvent, QAction
 from PySide6.QtWidgets import QWidget, QLabel, QVBoxLayout, QMenu
 from app.utils.logger import logger
 from app.core.event_bus import event_bus
 from app.core.config_manager import config_manager
+
+
+class PetImageLabel(QLabel):
+    """Report an actual paint, rather than treating setPixmap as presentation."""
+    frame_painted = Signal(str)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._pending_frame = None
+
+    def set_frame(self, pixmap, path):
+        self._pending_frame = path
+        self.setPixmap(pixmap)
+
+    def paintEvent(self, event):
+        super().paintEvent(event)
+        if self._pending_frame is not None:
+            path = self._pending_frame
+            self._pending_frame = None
+            logger.info("Pet frame painted | file=%s", os.path.basename(path))
+            self.frame_painted.emit(path)
+
 
 class DesktopPet(QWidget):
     def __init__(self):
@@ -43,7 +65,7 @@ class DesktopPet(QWidget):
         self.layout.setContentsMargins(10, 10, 10, 10)
         self.layout.setSpacing(0)
         
-        self.image_label = QLabel(self)
+        self.image_label = PetImageLabel(self)
         self.image_label.setScaledContents(True)
         self.layout.addWidget(self.image_label)
 
@@ -52,15 +74,23 @@ class DesktopPet(QWidget):
             logger.error(f"Image not found at path: {path}")
             return
         
-        self.current_image_path = path
         pixmap = QPixmap(path)
+        if pixmap.isNull():
+            logger.error("Pet frame decode failed | file=%s", os.path.basename(path))
+            return
+        self.current_image_path = path
         # Scale directly to configured pet size, ignoring aspect ratio to stretch to exact bounds
         scaled_pixmap = pixmap.scaled(
             self.pet_width, self.pet_height, 
             Qt.IgnoreAspectRatio, 
             Qt.SmoothTransformation
         )
-        self.image_label.setPixmap(scaled_pixmap)
+        logger.info(
+            "Pet frame received | file=%s | main_thread=%s | visible=%s | size=%sx%s",
+            os.path.basename(path), QThread.currentThread() == self.thread(),
+            self.isVisible(), self.pet_width, self.pet_height,
+        )
+        self.image_label.set_frame(scaled_pixmap, path)
         
         # Center of the window
         x = (self.width() - scaled_pixmap.width()) // 2

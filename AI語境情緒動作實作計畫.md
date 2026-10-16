@@ -432,3 +432,26 @@
 - 離屏視覺驗收不等同於 Windows 原生 DPI／多螢幕驗收。
 - 本輪產物保存在受 Git 忽略的 `.pytest_cache/emotion/acceptance-751da13/`，含完整測試日誌、視覺腳本、12 張原始截圖、兩張檢視用合成圖及 `visual-results.json`。
 - Tavily 遺留功能、`tree.txt` 及使用者搬移的過往計畫均未修改或納入提交；沒有推送遠端。
+
+## 16. 實機未觸發回報與診斷補強（2026-10-17）
+
+- 使用者回報將 rate 調成 1 後仍沒有情緒。檢查發現修改的是 `app/animation/emotion.py` 的 Python 備援常數，而預設與使用者 INI 的 `emotionrate` 都仍為 0.3；透過正式設定讀取函式確認實際生效值為 0.3。
+- 將使用者測試意圖移至 `data/config/app.ini` 的 `emotionrate = 1`，Python 備援常數恢復 0.3。使用者 INI 是本機執行資料，不納入版本控制；需要重啟程式才能載入。
+- 舊 log 未記錄模型情緒、rate 或略過原因，無法逐次還原先前失敗；因此僅確認「rate 未真正設為 1」，不宣稱先前所有未觸發均由抽樣未命中造成。
+- 新增 INFO 診斷：有效 rate、請求識別、標記解析狀態、白名單情緒選擇、略過原因、採用及到期。沒有記錄對話正文、原始非法標記或金鑰。
+- 新增 4 項回歸測試，涵蓋 INI 的 rate=1 真正到達 Animator 且不抽樣、略過原因區分、串流解析診斷及 log 不含正文。
+- 情緒相關 42 項測試及完整 **490 項測試**通過；完整測試前後 12 個 data 檔案雜湊一致（基準在上述設定修正之後）。
+- 讀取本機實際有效 rate=1，搭配合成串流、實際 Qt 元件與記憶體歷史完成離屏重現：happy／surprised／squint 均切換成功，none 保留閱讀，完成後約 3.018 秒回 idle。未呼叫外部 AI，也沒有宣稱已重跑使用者原生桌面互動。
+- 測試產物位於 `.pytest_cache/emotion/runtime-rate-one/`；修改尚未提交。
+
+## 17. happy 已採用但桌寵未變圖的追查（2026-10-17）
+
+- 使用者確認問題發生於可拖曳的實際桌寵，平常眨眼與左右看正常。02:51 的正式 log 已有 rate=1、happy 採用及 3 秒後到期，因此本次不能繼續歸因於機率設定。
+- 確認只有一個正式桌寵 Python 程序，執行的是本專案 `main.py`；驗收與正式程式使用相同 Python／PySide6 版本。
+- 獨立 Windows Qt 測試中，背景事件能在主執行緒送達桌寵並產生 happy 的繪圖事件；這項證據不等於先前使用者畫面已正常。
+- `ui/pet/desktop_pet.py` 新增 `PetImageLabel`，在實際 QLabel paintEvent 完成後記錄圖片檔名，並記錄接收端執行緒、可見狀態及尺寸。圖片無法解碼時保留原圖。沒有額外強制 repaint，也沒有改變情緒採用、3 秒期限或原有動畫規則。
+- 新增 `tests/test_pet_emotion_display.py`：以背景回覆、真實 EventBus／ConversationManager／Animator／DesktopPet 驗證 happy 到達視窗、自然繪圖及 pixmap 像素；不以強制 repaint 或 grab 觸發繪圖。
+- 完整 **491 項測試通過**，12 個 data 檔案雜湊一致。測試產物：`.pytest_cache/emotion/native-render/`；最後完整測試的診斷輸出另存 `suite-diagnostics.log`，避免與正式應用紀錄混淆。
+- 使用者重啟新版後於 **03:02:40.145** 收到 `Nova_happy.png`，**03:02:40.148** 完成繪圖；**03:02:43.158** 完成 idle 繪圖。該次 happy 與 idle 之間未出現其他正式圖片覆蓋紀錄。
+- 使用者回報「已測試目前正常」。本次實機重測成功；因先前缺少顯示端證據，仍不能唯一確定舊版未變圖的根因，也不把診斷補強描述為已證實的 Windows 繪圖修復。
+- 本輪修改尚未提交；保留前一輪的診斷修改與使用者其他變更。

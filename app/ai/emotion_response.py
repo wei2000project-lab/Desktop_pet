@@ -25,6 +25,7 @@ class ParsedEmotionResponse:
 class EmotionResponseParser:
     def __init__(self):
         self.emotion = None  # None until the prefix decision is final.
+        self.header_status = "pending"
         self._header = ""
         self._state = "prefix"
         self._closed = False
@@ -33,8 +34,9 @@ class EmotionResponseParser:
     def buffered_chars(self):
         return len(self._header) + (1 if self._state == "separator_cr" else 0)
 
-    def _resolve(self, emotion=Emotion.NONE, *, separator=False):
+    def _resolve(self, emotion=Emotion.NONE, *, separator=False, status="missing"):
         self.emotion = emotion
+        self.header_status = status
         self._header = ""
         self._state = "separator" if separator else "body"
 
@@ -73,15 +75,17 @@ class EmotionResponseParser:
                 value = self._header[len(EMOTION_PREFIX):-2]
                 try:
                     emotion = Emotion(value)
+                    status = "valid"
                 except ValueError:
                     emotion = Emotion.NONE
-                self._resolve(emotion, separator=True)
+                    status = "invalid_name"
+                self._resolve(emotion, separator=True, status=status)
             elif char in "\r\n":
-                self._resolve()
+                self._resolve(status="malformed")
                 if char == "\r":
                     self._state = "separator_cr"
             elif len(self._header) >= MAX_HEADER_CHARS:
-                self._resolve()
+                self._resolve(status="too_long")
         return "".join(output)
 
     def finish(self) -> str:
@@ -94,6 +98,7 @@ class EmotionResponseParser:
             tail = "\r"
         if self.emotion is None:
             self.emotion = Emotion.NONE
+            self.header_status = "truncated" if self._state == "header" else "missing"
         self._header = ""
         self._state = "body"
         return tail

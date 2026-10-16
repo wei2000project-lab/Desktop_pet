@@ -7,6 +7,23 @@ from app.contracts.emotion import Emotion
 
 
 class EmotionResponseTests(unittest.TestCase):
+    def test_header_diagnostics_distinguish_none_missing_and_invalid_without_body(self):
+        for raw, status in (
+            ("[[emotion:none]]\nprivate body", "valid"),
+            ("private body", "missing"),
+            ("[[emotion:private-name]]\nprivate body", "invalid_name"),
+            ("[[emotion:happy\nprivate body", "malformed"),
+            (EMOTION_PREFIX + "x" * MAX_HEADER_CHARS, "too_long"),
+            ("[[emotion:hap", "truncated"),
+        ):
+            for split in range(len(raw) + 1):
+                parser = EmotionResponseParser()
+                parser.feed(raw[:split])
+                parser.feed(raw[split:])
+                parser.finish()
+                self.assertEqual(parser.header_status, status)
+                self.assertNotIn("private", parser.header_status)
+
     def assert_parse(self, source, emotion, body):
         whole = parse_emotion_response(source)
         self.assertEqual((whole.emotion, whole.text), (emotion, body))
