@@ -22,6 +22,12 @@ class PromptBuilderTests(unittest.TestCase):
         self.assertIn("不要只因使用者提到情緒字詞", prompt)
         self.assertIn("不自行抽機率", prompt)
 
+    def test_emotion_protocol_distinguishes_quoted_tasks_from_nova_reactions(self):
+        prompt = build_system_prompt({}, emotion_enabled=True)
+        self.assertIn("純翻譯、改寫、摘要、分類、排序或程式碼輸出應選 none", prompt)
+        self.assertIn("情緒屬於引文角色，不是 Nova 的反應", prompt)
+        self.assertIn("說法不可信、誇大、矛盾或需要查證，選 squint", prompt)
+
     def test_build_system_prompt_does_not_add_reply_length_instruction(self):
         prompt = build_system_prompt(
             {"system_prompt": "你是 Nova。"},
