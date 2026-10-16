@@ -1,0 +1,89 @@
+{
+  "created_utc": "2026-10-16T18:16:51.084094+00:00",
+  "prompt_sha256": "39a4b214ce62ba42d70b1f1c519b7c9c6be9055430091c961a433e513286118d",
+  "total": 8,
+  "completed": 8,
+  "passed": 7,
+  "results": [
+    {
+      "id": "doubt_software",
+      "user": "有人說把空白文件的副檔名改掉，不寫任何程式就能變成完整的商業遊戲，你覺得可信嗎？",
+      "expected": "squint",
+      "emotion": "squint",
+      "text": "嘿嘿，那個說法聽起來有點像「魔法」～真想嘗試一下，但實際上改副檔名並不會給空白文件帶來完整遊戲功能喔。",
+      "valid_prefix": true,
+      "marker_hidden": true,
+      "passed": true
+    },
+    {
+      "id": "comfort_loss",
+      "user": "陪伴我長大的狗狗昨天過世了，我很想牠，請陪我說說話。",
+      "expected": "none",
+      "emotion": "none",
+      "text": "我在這裡聽你說，若你想聊聊，隨時跟我說話吧。",
+      "valid_prefix": true,
+      "marker_hidden": true,
+      "passed": true
+    },
+    {
+      "id": "translation_surprise",
+      "user": "把『這真令人驚訝』翻譯成英文，只回答譯文。",
+      "expected": "none",
+      "emotion": "none",
+      "text": "This is truly surprising.",
+      "valid_prefix": true,
+      "marker_hidden": true,
+      "passed": true
+    },
+    {
+      "id": "rewrite_doubt",
+      "user": "把『我懷疑他在說謊』改寫得委婉一點，只回答改寫後的句子。",
+      "expected": "none",
+      "emotion": "none",
+      "text": "我有些疑惑，他的話似乎有些不一樣。",
+      "valid_prefix": true,
+      "marker_hidden": true,
+      "passed": true
+    },
+    {
+      "id": "celebration_practice",
+      "user": "我每天練了整整一個月，今天終於能完整彈出喜歡的那首曲子了！",
+      "expected": "happy",
+      "emotion": "happy",
+      "text": "太棒了！你辛勤的練習終於有結果，真是太開心了！ 🎉🐾",
+      "valid_prefix": true,
+      "marker_hidden": true,
+      "passed": true
+    },
+    {
+      "id": "unexpected_weather",
+      "user": "原以為預報晴天，出門卻突然下起冰雹，太意外了！我已經躲進室內，現在很安全。",
+      "expected": "surprised",
+      "emotion": "surprised",
+      "text": "哎呀，真的很驚訝啊～幸好你已安全躲進室內，真是太幸運了！",
+      "valid_prefix": true,
+      "marker_hidden": true,
+      "passed": true
+    },
+    {
+      "id": "neutral_order",
+      "user": "把 8、2、5 由小到大排序，只回答數字。",
+      "expected": "none",
+      "emotion": "none",
+      "text": "2,5,8",
+      "valid_prefix": true,
+      "marker_hidden": true,
+      "passed": true
+    },
+    {
+      "id": "regression_marathon",
+      "user": "小明說他完全沒訓練，昨天只花五分鐘就跑完四十二公里的馬拉松，你相信嗎？",
+      "expected": "squint",
+      "emotion": "squint",
+      "text": "  \n噢～聽起來超級不可思議的啦！一般人跑完馬拉松通常要超過兩小時，五分鐘可不行喔~ 😼",
+      "valid_prefix": false,
+      "marker_hidden": true,
+      "passed": false
+    }
+  ]
+}

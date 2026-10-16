@@ -1,0 +1,10 @@
+[
+  {"id":"doubt_software","user":"有人說把空白文件的副檔名改掉，不寫任何程式就能變成完整的商業遊戲，你覺得可信嗎？","expected":"squint"},
+  {"id":"comfort_loss","user":"陪伴我長大的狗狗昨天過世了，我很想牠，請陪我說說話。","expected":"none"},
+  {"id":"translation_surprise","user":"把『這真令人驚訝』翻譯成英文，只回答譯文。","expected":"none"},
+  {"id":"rewrite_doubt","user":"把『我懷疑他在說謊』改寫得委婉一點，只回答改寫後的句子。","expected":"none"},
+  {"id":"celebration_practice","user":"我每天練了整整一個月，今天終於能完整彈出喜歡的那首曲子了！","expected":"happy"},
+  {"id":"unexpected_weather","user":"原以為預報晴天，出門卻突然下起冰雹，太意外了！我已經躲進室內，現在很安全。","expected":"surprised"},
+  {"id":"neutral_order","user":"把 8、2、5 由小到大排序，只回答數字。","expected":"none"},
+  {"id":"regression_marathon","user":"小明說他完全沒訓練，昨天只花五分鐘就跑完四十二公里的馬拉松，你相信嗎？","expected":"squint"}
+]
